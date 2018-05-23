@@ -12,15 +12,17 @@ using Terraria.ModLoader.IO;
 
 namespace Dimlibs.API
 {
-    
+
     public class DimItem : ModItem
     {
         public string dimensionName { get; set; }
+        public string dimensionMessage { get; set; }
         internal DimGenerator generator;
         public int itemUseCooldown = 0;
         public override bool Autoload(ref string name)
         {
-            if (name == "DimItem") {
+            if (name == "DimItem")
+            {
                 return false;
             }
             return true;
@@ -31,7 +33,8 @@ namespace Dimlibs.API
             item.maxStack = 1;
         }
 
-        public void setDimensionGenerator(DimGenerator generator) {
+        public void setDimensionGenerator(DimGenerator generator)
+        {
             this.generator = generator;
         }
 
@@ -48,8 +51,14 @@ namespace Dimlibs.API
                 if (p.getCurrentDimension() != dimensionName)
                 {
                     p.setCurrentDimension(dimensionName);
-                    Main.NewText("You are entering into a custom dimension...", Color.Orange);
-
+                    if (dimensionMessage != null)
+                    {
+                        Main.NewText("Get dunked m8", Color.Orange);
+                    }
+                    else
+                    {
+                        Main.NewText("You are entering into a custom dimension...", Color.Orange);
+                    }
                     if (!File.Exists(Main.SavePath + "/World/" + dimensionName + "/" + Main.worldName + ".wld"))
                     {
                         info.SetValue(Main.ActiveWorldFileData, Main.SavePath + "/World/" + dimensionName + "/" + Main.worldName + ".wld");
@@ -73,7 +82,8 @@ namespace Dimlibs.API
             return false;
         }
 
-        internal void generateDimension() {
+        internal void generateDimension()
+        {
             WorldFile.saveWorld(false, true);
             WorldGen.clearWorld();
 

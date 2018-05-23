@@ -14,11 +14,13 @@ namespace Dimlibs
         internal static List<string> dimList = new List<string>();
         private string currentDimension = "overworld";
 
-        public string getCurrentDimension() {
+        public string getCurrentDimension()
+        {
             return currentDimension;
         }
 
-        internal void setCurrentDimension(String currentDimension) {
+        internal void setCurrentDimension(String currentDimension)
+        {
             this.currentDimension = currentDimension;
         }
 
@@ -32,11 +34,6 @@ namespace Dimlibs
         public override void Load(TagCompound tag)
         {
             currentDimension = tag.GetString("dimension");
-        }
-
-        public override void UpdateBiomeVisuals()
-        {
-            Main.NewText("test");
         }
     }
 }

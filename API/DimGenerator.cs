@@ -84,13 +84,15 @@ namespace Dimlibs.API
             _generator.Append(new PassLegacy(name, method, weight));
         }
 
-        internal void GenerateDimension(int seed, GenerationProgress customProgressObject = null) {
+        internal void GenerateDimension(int seed, GenerationProgress customProgressObject = null)
+        {
             reset(seed);
             ModifyGenerationPass(seed, customProgressObject);
             final(customProgressObject);
         }
 
-        public void reset(int seed) {
+        public void reset(int seed)
+        {
             WorldGen._lastSeed = seed;
             _generator = new WorldGenerator(seed);
             Main.rand = new UnifiedRandom(seed);
@@ -121,7 +123,8 @@ namespace Dimlibs.API
             WorldHooks.PreWorldGen();
         }
 
-        private void final(GenerationProgress customProgressObject) {
+        private void final(GenerationProgress customProgressObject)
+        {
             float weight = GetTotalLoadWeight(_generator);
             WorldHooks.ModifyWorldGenTasks(GetPasses(_generator), ref weight);
             SetTotalLoadWeight(_generator, weight);

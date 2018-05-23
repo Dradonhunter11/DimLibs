@@ -3,10 +3,10 @@ using Terraria.ModLoader;
 
 namespace Dimlibs
 {
-	public class Dimlibs : Mod
-	{
-		public Dimlibs()
-		{
+    public class Dimlibs : Mod
+    {
+        public Dimlibs()
+        {
             Properties = new ModProperties()
             {
                 Autoload = true
@@ -18,9 +18,10 @@ namespace Dimlibs
             base.Load();
         }
 
-        public static string getPlayerDim() {
+        public static string getPlayerDim()
+        {
             DimPlayer plr = Main.LocalPlayer.GetModPlayer<DimPlayer>();
             return plr.getCurrentDimension();
         }
-	}
+    }
 }
