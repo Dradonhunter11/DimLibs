@@ -1,0 +1,6 @@
+author = Dradonhunter11
+version = 0.1
+displayName = DimLibs
+homepage = 
+buildIgnore = *.csproj, *.user, obj\*, bin\*, .vs\*
+includePDB = true
