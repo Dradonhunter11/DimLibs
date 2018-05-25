@@ -93,6 +93,7 @@ namespace Dimlibs.API
 
         public void reset(int seed)
         {
+            
             WorldGen._lastSeed = seed;
             _generator = new WorldGenerator(seed);
             Main.rand = new UnifiedRandom(seed);
