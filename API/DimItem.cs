@@ -59,21 +59,21 @@ namespace Dimlibs.API
                     {
                         Main.NewText("You are entering into a custom dimension...", Color.Orange);
                     }
-                    if (!File.Exists(Main.SavePath + "/World/" + dimensionName + "/" + Main.worldName + ".wld"))
+                    if (!File.Exists(Main.SavePath + "/World/" + (dimensionName + "/" + Main.worldName + ".wld").Replace(' ', '_')))
                     {
-                        info.SetValue(Main.ActiveWorldFileData, Main.SavePath + "/World/" + dimensionName + "/" + Main.worldName + ".wld");
+                        info.SetValue(Main.ActiveWorldFileData, Main.SavePath + "/World/" + (dimensionName + "/" + Main.worldName + ".wld").Replace(' ', '_'));
                         generateDimension();
                         p.player.Spawn();
                         return true;
                     }
 
-                    info.SetValue(Main.ActiveWorldFileData, Main.SavePath + "/World/" + dimensionName + "/" + Main.worldName + ".wld");
+                    info.SetValue(Main.ActiveWorldFileData, Main.SavePath + "/World/" + (dimensionName + "/" + Main.worldName + ".wld").Replace(' ', '_'));
                     itemUseCooldown = 500;
                     WorldGen.EveryTileFrame();
                     WorldGen.playWorld();
                     return true;
                 }
-                info.SetValue(Main.ActiveWorldFileData, Main.SavePath + "/World/" + Main.worldName + ".wld");
+                info.SetValue(Main.ActiveWorldFileData, Main.SavePath + "/World/" + (Main.worldName + ".wld").Replace(' ', '_'));
                 p.setCurrentDimension("overworld");
                 itemUseCooldown = 500;
                 WorldGen.playWorld();
