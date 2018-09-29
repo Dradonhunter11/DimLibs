@@ -14,6 +14,7 @@ namespace Dimlibs
         internal static List<string> dimList = new List<string>();
         private string currentDimension = "overworld";
 
+
         public string getCurrentDimension()
         {
             return currentDimension;

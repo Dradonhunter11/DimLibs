@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Threading.Tasks;
 using Terraria;
 using Terraria.IO;
 using Terraria.ModLoader;
@@ -45,15 +46,17 @@ namespace Dimlibs.API
             FieldInfo info = typeof(FileData).GetField("_path", BindingFlags.Instance | BindingFlags.NonPublic);
             string get = (string)info.GetValue(Main.ActiveWorldFileData);
 
+            
+
             if (itemUseCooldown == 0)
             {
                 WorldFile.saveWorld(false, true);
                 if (p.getCurrentDimension() != dimensionName)
                 {
                     p.setCurrentDimension(dimensionName);
-                    if (dimensionMessage != null)
+                    if (dimensionMessage != "")
                     {
-                        Main.NewText("Get dunked m8", Color.Orange);
+                        Main.NewText(dimensionMessage, Color.Orange);
                     }
                     else
                     {
@@ -61,9 +64,11 @@ namespace Dimlibs.API
                     }
                     if (!File.Exists(Main.SavePath + "/World/" + dimensionName + "/" + Main.worldName + ".wld"))
                     {
+                        
                         info.SetValue(Main.ActiveWorldFileData, Main.SavePath + "/World/" + dimensionName + "/" + Main.worldName + ".wld");
-                        generateDimension();
+                        startGen();
                         p.player.Spawn();
+                        WorldFile.saveWorld(false, true);
                         return true;
                     }
 
@@ -82,7 +87,15 @@ namespace Dimlibs.API
             return false;
         }
 
-        internal void generateDimension()
+        
+
+        private async void startGen()
+        {
+            generator.isGenerating = true;
+            await generateDimension();
+        }
+
+        async Task generateDimension()
         {
             WorldFile.saveWorld(false, true);
             WorldGen.clearWorld();
@@ -90,7 +103,8 @@ namespace Dimlibs.API
             generator.GenerateDimension(Main.rand.Next());
             itemUseCooldown = 500;
 
-            WorldGen.EveryTileFrame();
+            //WorldGen.EveryTileFrame();
+            
         }
 
         public override void UpdateInventory(Player player)

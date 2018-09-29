@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.Design;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -15,8 +16,9 @@ namespace Dimlibs.API
 {
     public abstract class DimGenerator
     {
-
+        internal bool isGenerating = false;
         internal static string dimensionName;
+        internal static DimensionHandler handler;
 
         protected int copper;
         protected int iron;
@@ -39,6 +41,10 @@ namespace Dimlibs.API
         protected double worldSurfaceHigh;
         protected double rockLayerLow;
         protected double rockLayerHigh;
+
+        protected int _DimensionMaxTileX = 2400;
+        protected int _DimensionMaxTileY = 1200;
+
 
         public abstract void ModifyGenerationPass(int seed, GenerationProgress customProgressObject);
 
@@ -89,7 +95,10 @@ namespace Dimlibs.API
             reset(seed);
             ModifyGenerationPass(seed, customProgressObject);
             final(customProgressObject);
+            finish();
         }
+
+        
 
         public void reset(int seed)
         {
@@ -124,16 +133,35 @@ namespace Dimlibs.API
             WorldHooks.PreWorldGen();
         }
 
+        public void finish()
+        {
+            isGenerating = false;
+        }
+
         private void final(GenerationProgress customProgressObject)
         {
             float weight = GetTotalLoadWeight(_generator);
-            WorldHooks.ModifyWorldGenTasks(GetPasses(_generator), ref weight);
+            //WorldHooks.ModifyWorldGenTasks(GetPasses(_generator), ref weight);
             SetTotalLoadWeight(_generator, weight);
             Main.menuMode = 888;
-            _generator.GenerateWorld(customProgressObject);
-            WorldHooks.PostWorldGen();
+            gen(customProgressObject);
             Main.WorldFileMetadata = FileMetadata.FromCurrentSettings(FileType.World);
         }
 
+        private async void gen(GenerationProgress customProgressObject)
+        {
+            g(customProgressObject);
+        }
+
+        async Task g(GenerationProgress customProgressObject)
+        {
+            _generator.GenerateWorld(customProgressObject);
+            //WorldHooks.PostWorldGen();
+        }
+
+        public DimGenerator(String dimensionName)
+        {
+            handler = new DimensionHandler(this, dimensionName);
+        }
     }
 }
