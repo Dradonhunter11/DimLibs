@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Dimlibs.API;
-using ReLogic.Utilities;
 using Terraria;
 using Terraria.Localization;
 using Terraria.ModLoader;
@@ -30,7 +29,7 @@ namespace Dimlibs
 
         public override void Unload()
         {
-            ReflectionUtil.MassSwap();
+            // TerrariaHooks undoes our swaps for us.
         }
 
         public override void PostSetupContent()

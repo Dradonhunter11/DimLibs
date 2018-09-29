@@ -64,14 +64,14 @@ namespace Dimlibs.API
                     }
                     if (!File.Exists(Main.SavePath + "/World/" + (dimensionName + "/" + Main.worldName + ".wld").Replace(' ', '_')))
                     {
-<<<<<<< HEAD
+/**///<<<<<<< HEAD
                         
                         info.SetValue(Main.ActiveWorldFileData, Main.SavePath + "/World/" + dimensionName + "/" + Main.worldName + ".wld");
                         startGen();
-=======
+/*///=======
                         info.SetValue(Main.ActiveWorldFileData, Main.SavePath + "/World/" + (dimensionName + "/" + Main.worldName + ".wld").Replace(' ', '_'));
                         generateDimension();
->>>>>>> e6af22ba0365756f77f48c73c0c78257d723705b
+/**///>>>>>>> e6af22ba0365756f77f48c73c0c78257d723705b
                         p.player.Spawn();
                         WorldFile.saveWorld(false, true);
                         return true;
