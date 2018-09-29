@@ -62,23 +62,28 @@ namespace Dimlibs.API
                     {
                         Main.NewText("You are entering into a custom dimension...", Color.Orange);
                     }
-                    if (!File.Exists(Main.SavePath + "/World/" + dimensionName + "/" + Main.worldName + ".wld"))
+                    if (!File.Exists(Main.SavePath + "/World/" + (dimensionName + "/" + Main.worldName + ".wld").Replace(' ', '_')))
                     {
+<<<<<<< HEAD
                         
                         info.SetValue(Main.ActiveWorldFileData, Main.SavePath + "/World/" + dimensionName + "/" + Main.worldName + ".wld");
                         startGen();
+=======
+                        info.SetValue(Main.ActiveWorldFileData, Main.SavePath + "/World/" + (dimensionName + "/" + Main.worldName + ".wld").Replace(' ', '_'));
+                        generateDimension();
+>>>>>>> e6af22ba0365756f77f48c73c0c78257d723705b
                         p.player.Spawn();
                         WorldFile.saveWorld(false, true);
                         return true;
                     }
 
-                    info.SetValue(Main.ActiveWorldFileData, Main.SavePath + "/World/" + dimensionName + "/" + Main.worldName + ".wld");
+                    info.SetValue(Main.ActiveWorldFileData, Main.SavePath + "/World/" + (dimensionName + "/" + Main.worldName + ".wld").Replace(' ', '_'));
                     itemUseCooldown = 500;
                     WorldGen.EveryTileFrame();
                     WorldGen.playWorld();
                     return true;
                 }
-                info.SetValue(Main.ActiveWorldFileData, Main.SavePath + "/World/" + Main.worldName + ".wld");
+                info.SetValue(Main.ActiveWorldFileData, Main.SavePath + "/World/" + (Main.worldName + ".wld").Replace(' ', '_'));
                 p.setCurrentDimension("overworld");
                 itemUseCooldown = 500;
                 WorldGen.playWorld();

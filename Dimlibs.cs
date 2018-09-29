@@ -83,7 +83,7 @@ namespace Dimlibs
 
             if (getPlayerDim() != "overworld")
             {
-                Main.WorldPath = Main.SavePath + "/World/" + getPlayerDim();
+                Main.WorldPath = Main.SavePath + "/World/" + getPlayerDim().Replace(' ', '_');
             }
             else if (getPlayerDim() == "overworld")
             {
