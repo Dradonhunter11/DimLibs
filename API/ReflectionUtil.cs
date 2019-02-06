@@ -8,6 +8,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Xna.Framework;
 using Terraria;
 using Terraria.ID;
 using Terraria.IO;
@@ -17,122 +18,41 @@ using Terraria.Utilities;
 
 namespace Dimlibs.API
 {
-    class ReflectionUtil
+    public static class ReflectionUtil
     {
-        public static MethodInfo OriginalLoadWorld;
-
-        public static void MethodSwap(Type OriginalMethodType, String OriginalMethodName, Type NewMethodType, String NewMethodName)
+        public static void Load()
         {
-            if (IntPtr.Size == 4)
-            {
-                MethodSwap32Bit(OriginalMethodType, OriginalMethodName, NewMethodType, NewMethodName);
-                return;
-            }
-            MethodSwap64bit(OriginalMethodType, OriginalMethodName, NewMethodType, NewMethodName);
+            On.Terraria.IO.WorldFile.SaveWorldTiles += SaveWorldTiles;
+            On.Terraria.IO.WorldFile.saveWorld_bool_bool += SaveWorld;
+            On.Terraria.IO.WorldFile.loadWorld += LoadWorld;
         }
 
-        public static void OverloadedMethodSwap(Type OriginalMethodType, String OriginalMethodName, Type NewMethodType, String NewMethodName, Type[] parameter = null)
+        public static void Unload()
         {
-            if (IntPtr.Size == 4)
-            {
-                MethodSwap32Bit(OriginalMethodType, OriginalMethodName, NewMethodType, NewMethodName, parameter);
-                return;
-            }
-            MethodSwap64bit(OriginalMethodType, OriginalMethodName, NewMethodType, NewMethodName, parameter);
+            On.Terraria.IO.WorldFile.SaveWorldTiles -= SaveWorldTiles;
+            On.Terraria.IO.WorldFile.saveWorld_bool_bool -= SaveWorld;
+            On.Terraria.IO.WorldFile.loadWorld -= LoadWorld;
         }
 
-
-        public static void MethodSwap32Bit(Type OriginalMethodType, String OriginalMethodName, Type NewMethodType, String NewMethodName, Type[] parameter = null)
-        {
-            MethodInfo OriginalMethod = (parameter != null)
-                ? OriginalMethodType.GetMethod(OriginalMethodName, parameter)
-                : OriginalMethodType.GetMethod(OriginalMethodName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.Static | BindingFlags.NonPublic);
-
-
-            MethodInfo NewMethod =
-                NewMethodType.GetMethod(NewMethodName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.Static | BindingFlags.NonPublic);
-
-            RuntimeHelpers.PrepareMethod(OriginalMethod.MethodHandle);
-            RuntimeHelpers.PrepareMethod(NewMethod.MethodHandle);
-
-            IntPtr ptr = OriginalMethod.MethodHandle.Value + IntPtr.Size * 2;
-            IntPtr ptr2 = NewMethod.MethodHandle.Value + IntPtr.Size * 2;
-            int value;
-
-            value = ptr.ToInt32();
-            Marshal.WriteInt32(ptr, Marshal.ReadInt32(ptr2));
-            Marshal.WriteInt32(ptr2, Marshal.ReadInt32(new IntPtr(value)));
-
-        }
-
-        public static unsafe void MethodSwap64bit(Type OriginalMethodType, String OriginalMethodName, Type NewMethodType, String NewMethodName, Type[] parameter = null)
-        {
-            MethodInfo OriginalMethod = (parameter != null)
-                ? OriginalMethodType.GetMethod(OriginalMethodName, parameter)
-                : OriginalMethodType.GetMethod(OriginalMethodName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.Static | BindingFlags.NonPublic);
-            MethodInfo NewMethod =
-                NewMethodType.GetMethod(NewMethodName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.Static | BindingFlags.NonPublic);
-            RuntimeHelpers.PrepareMethod(OriginalMethod.MethodHandle);
-            RuntimeHelpers.PrepareMethod(NewMethod.MethodHandle);
-
-            long* inj = (long*)NewMethod.MethodHandle.Value.ToPointer() + 1;
-            long* tar = (long*)OriginalMethod.MethodHandle.Value.ToPointer() + 1;
-            *tar = *inj;
-        }
-
-        public static Delegate GetEventDelegate(Object obj, string evt)
-        {
-            Delegate del = null;
-            FieldInfo fi = obj.GetType().GetField("OnClick",
-                BindingFlags.NonPublic |
-                BindingFlags.Static |
-                BindingFlags.Instance |
-                BindingFlags.FlattenHierarchy |
-                BindingFlags.IgnoreCase);
-
-            if (fi != null)
-            {
-                Object value = fi.GetValue(obj);
-                if (value is Delegate)
-                {
-                    del = (Delegate)value;
-                }
-            }
-            
-            return del;
-        }
-
-        public static Object Clone(Object objToClone)
+        public static Object Clone(Object self)
         {
             return typeof(Object).GetMethod("MemberwiseClone", BindingFlags.NonPublic | BindingFlags.Instance)
-                .Invoke(objToClone, new object[] { });
+                .Invoke(self, new object[] { });
         }
 
-
-        public static void MassSwap()
-        {
-            OriginalLoadWorld = typeof(ReflectionUtil).GetMethod("LoadWorld",
-                BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
-            OverloadedMethodSwap(typeof(WorldFile), "saveWorld", typeof(ReflectionUtil), "SaveWorld", new Type[] {typeof(bool), typeof(bool)});
-            MethodSwap(typeof(WorldFile), "loadWorld", typeof(ReflectionUtil), "LoadWorld");
-            MethodSwap(typeof(WorldFile), "SaveWorldTiles", typeof(ReflectionUtil), "SaveWorldTiles");
-        }
-
-
-
-        private static int SaveWorldTiles(BinaryWriter writer)
+        private static int SaveWorldTiles(On.Terraria.IO.WorldFile.orig_SaveWorldTiles orig, BinaryWriter writer)
         {
             byte[] array = new byte[13];
             for (int i = 0; i < Main.maxTilesX; i++)
             {
                 float num = (float)i / (float)Main.maxTilesX;
-                Main.statusText = string.Concat(new object[]
+                /*Main.statusText = string.Concat(new object[]
                     {
                         Lang.gen[49].Value,
                         " ",
                         (int)(num * 100f + 1f),
                         "%"
-                    });
+                    });*/
                 for (int j = 0; j < Main.maxTilesY; j++)
                 {
                     Tile tile = Main.tile[i, j];
@@ -310,7 +230,9 @@ namespace Dimlibs.API
             return (int)writer.BaseStream.Position;
         }
 
-        public static void SaveWorld(bool useCloudSaving, bool resetTime = false)
+
+
+        public static void SaveWorld(On.Terraria.IO.WorldFile.orig_saveWorld_bool_bool orig, bool useCloudSaving, bool resetTime = false)
         {
             FieldInfo padLockInfo = typeof(WorldFile).GetField("padlock", BindingFlags.Static | BindingFlags.NonPublic);
             Object padlock = padLockInfo.GetValue(null);
@@ -427,13 +349,11 @@ namespace Dimlibs.API
             Main.serverGenLock = false;*/
         }
 
-        public static void LoadWorld(bool loadFromCloud)
+        public static void LoadWorld(On.Terraria.IO.WorldFile.orig_loadWorld orig, bool loadFromCloud)
         {
             foreach (DimensionHandler dim in DimWorld.dimensionInstanceHandlers.Values)
             {
-
-                dim.LoadWorld();
-                
+                dim.LoadWorld();   
             }
         }
     }

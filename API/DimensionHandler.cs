@@ -1,16 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 using Terraria;
 using Terraria.IO;
 using Terraria.Map;
 using Terraria.ModLoader;
-using Terraria.ModLoader.IO;
 using Terraria.Social;
 using Terraria.Utilities;
 using Terraria.World.Generation;
@@ -29,7 +24,19 @@ namespace Dimlibs.API
         private String dimensionName;
         private int dimensionID;
 
-        public int DimensionID {
+        private int maxTileX;
+        private int maxTileY;
+        private readonly int spawnX;
+        private readonly int spawnY;
+
+        private readonly float bottomWorld;
+        private readonly float topWorld;
+        private readonly float leftWorld;
+        private readonly float rightWorld;
+
+
+        public int DimensionID
+        {
             get { return dimensionID; }
             internal set { dimensionID = value; }
         }
@@ -61,7 +68,10 @@ namespace Dimlibs.API
             instanceHostileNPCArray = Main.npc;
             chest = Main.chest;
             map = Main.Map;
-            saveDimensionWorld(false);
+            if (Main.netMode != 1)
+            {
+                saveDimensionWorld(false);
+            }
         }
 
         public void load(String path)
@@ -79,6 +89,25 @@ namespace Dimlibs.API
         {
             Main.tile = dimensionTile;
             Main.Map = map;
+            swapMinorData();
+            /*if (Main.netMode != 1)
+            {
+                Main.LocalPlayer.Spawn();
+            }
+            else
+            {
+                Main.player[Main.LocalPlayer.whoAmI].Spawn();
+            }*/
+        }
+
+        private void swapMinorData()
+        {
+            /*Main.bottomWorld = maxTileY * 16;
+            Main.leftWorld = 0;
+            Main.topWorld = 0;
+            Main.rightWorld = maxTileX * 16;*/
+            Main.maxTilesX = maxTileX;
+            Main.maxTilesY = maxTileY;
         }
 
         public void LoadWorld()
@@ -88,7 +117,14 @@ namespace Dimlibs.API
 
         public void saveDimensionWorld(bool useCloudSaving, bool resetTime = false)
         {
+            Console.WriteLine(Main.ActiveWorldFileData.Path);
             Tile[,] tempTileArray = (Tile[,])Main.tile.Clone();
+            int tempMaxTileX = Main.maxTilesX;
+            int tempMaxTileY = Main.maxTilesY;
+
+            swapMinorData();
+
+
             if (dimensionTile != null)
             {
                 Main.tile = dimensionTile;
@@ -132,7 +168,7 @@ namespace Dimlibs.API
             WorldGen.saveLock = true;
             while (WorldGen.IsGeneratingHardMode)
             {
-                Main.statusText = Lang.gen[48].Value;
+                //Main.statusText = Lang.gen[48].Value;
             }
             lock (padlock)
             {
@@ -200,7 +236,7 @@ namespace Dimlibs.API
                             if (array2 != null)
                             {
                                 text = tempName + ".bak";
-                                Main.statusText = Lang.gen[50].Value;
+                                //Main.statusText = Lang.gen[50].Value;
                             }
                         }
                         else
@@ -213,22 +249,28 @@ namespace Dimlibs.API
                 {
                     FileUtilities.WriteAllBytes(text, array2, useCloudSaving);
                 }
-                Save.Invoke(null, new Object[] {tempName, useCloudSaving});
+                Save.Invoke(null, new Object[] { tempName, useCloudSaving });
                 WorldGen.saveLock = false;
             }
             Main.serverGenLock = false;
             Main.tile = tempTileArray;
+            /*Main.bottomWorld = tempMaxTileY * 16;
+            Main.topWorld = 0;
+            Main.leftWorld = 0;
+            Main.rightWorld = tempMaxTileX * 16;*/
+            Main.maxTilesX = tempMaxTileX;
+            Main.maxTilesY = tempMaxTileY;
         }
 
         public void loadWorld(bool loadFromCloud)
         {
-            Tile[,] tempTileArray = (Tile[,])Main.tile.Clone();
-            WorldMap tempMap = (WorldMap) ReflectionUtil.Clone(Main.Map);
-            
+            Tile[,] tempTileArray = cloneTile(Main.tile);
+            WorldMap tempMap = (WorldMap)ReflectionUtil.Clone(Main.Map);
+
             string savePath = Main.WorldPath + "/" + Main.ActiveWorldFileData.Name + "_dimension/";
             string tempName = Main.ActiveWorldFileData.Name + "_" + dimensionName + ".wld";
             string combinedPath = savePath + tempName;
-            
+
             WorldFile.IsWorldOnCloud = loadFromCloud;
             Main.checkXMas();
             Main.checkHalloween();
@@ -256,18 +298,6 @@ namespace Dimlibs.API
                     }
                 }
                 WorldGen.clearWorld();
-                //string name = (Main.worldName == "") ? "World" : Main.worldName;
-                //Main.ActiveWorldFileData = WorldFile.CreateMetadata(name, flag, Main.expertMode);
-                /*string text = (Main.AutogenSeedName ?? "").Trim();
-                if (text.Length == 0)
-                {
-                    
-                    Main.ActiveWorldFileData.SetSeedToRandom();
-                }
-                else
-                {
-                    Main.ActiveWorldFileData.SetSeed(text);
-                }*/
                 generator.GenerateDimension(Main.ActiveWorldFileData.Seed, new GenerationProgress());
                 Save();
             }
@@ -307,7 +337,7 @@ namespace Dimlibs.API
                         //WorldHooks.SetupWorld();
                         typeof(WorldHooks).GetMethod("SetupWorld", BindingFlags.Static | BindingFlags.NonPublic)
                             .Invoke(null, new object[] { });
-                        typeof(Main).Assembly.GetType("Terraria.ModLoader.IO.WorldIO").GetMethod("Load", BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public).Invoke(null, new object[] {combinedPath, flag});
+                        typeof(Main).Assembly.GetType("Terraria.ModLoader.IO.WorldIO").GetMethod("Load", BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public).Invoke(null, new object[] { combinedPath, flag });
                         if (num2 != 0)
                         {
                             WorldGen.loadFailed = true;
@@ -344,13 +374,13 @@ namespace Dimlibs.API
                             {
                                 num6 = num5;
                             }
-                            Main.statusText = string.Concat(new object[]
+                            /*Main.statusText = string.Concat(new object[]
                                 {
                                     Lang.gen[27].Value,
                                     " ",
                                     (int)(num6 * 100f / 2f + 50f),
                                     "%"
-                                });
+                                });*/
                             Liquid.UpdateLiquid();
                         }
                         Liquid.quickSettle = false;
@@ -383,17 +413,52 @@ namespace Dimlibs.API
                 }
             }
 
-            map = (WorldMap) ReflectionUtil.Clone(Main.Map);
+            map = (WorldMap)ReflectionUtil.Clone(Main.Map);
             dimensionTile = (Tile[,])Main.tile.Clone();
             if (dimensionName != "Overworld")
             {
                 Main.tile = tempTileArray;
                 Main.Map = tempMap;
             }
-            /*if (WorldFile.OnWorldLoad != null)
+
+            maxTileX = Main.maxTilesX;
+            maxTileY = Main.maxTilesY;
+            /*bottomWorld = Main.bottomWorld;
+            topWorld = Main.topWorld;
+            leftWorld = Main.leftWorld;
+            rightWorld = Main.rightWorld;*/
+            /*spawnX = Main.spawnTileX;
+            spawnY = Main.spawnTileY;*/
+
+            EventInfo OnWorldLoadInfo =
+                typeof(WorldFile).GetEvent("OnWorldLoad", BindingFlags.Public | BindingFlags.Static);
+
+
+            if (OnWorldLoadInfo != null)
             {
-                WorldFile.OnWorldLoad();
-            }*/
+                Object[] worldObject = {  };
+                MethodInfo[] methodArray = OnWorldLoadInfo.GetOtherMethods();
+                foreach (MethodInfo m in methodArray)
+                {
+                    m.Invoke(null, worldObject);
+                }
+            }
+        }
+
+        public static Tile[,] cloneTile(Tile[,] array)
+        {
+            Tile[,] newArray = (Tile[,])array.Clone();
+            for (int i = 0; i < array.GetLength(0); i++)
+            {
+                for (int j = 0; j < array.GetLength(1); j++)
+                {
+                    if (array[i, j] != null)
+                    {
+                        newArray[i, j] = (Tile)array[i, j].Clone();
+                    }
+                }
+            }
+            return newArray;
         }
     }
 }

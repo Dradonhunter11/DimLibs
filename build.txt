@@ -1,6 +1,6 @@
 author = Dradonhunter11
-version = 0.1.1
-displayName = DimLibs
+version = 2.0
+displayName = Dimension Library + Infinite world
 buildIgnore = *.csproj, *.user, obj\*, bin\*, .vs\*
 includePDB = true
 languageVersion = 6

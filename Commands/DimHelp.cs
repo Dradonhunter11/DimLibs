@@ -8,22 +8,27 @@ using Terraria.ModLoader;
 
 namespace Dimlibs.Commands
 {
-    class DimensionList : ModCommand
+    class DimHelp : ModCommand
     {
         public override void Action(CommandCaller caller, string input, string[] args)
         {
-            Main.NewText("=== Current active dimension === ");
-            foreach (var dimKey in DimWorld.dimensionInstanceHandlers.Keys)
+            Console.WriteLine("[c/FFFF00:=== Dimlibs command libs ===]");
+            foreach (var modCommand in Dimlibs.commandsList)
             {
-                Console.WriteLine("- " + dimKey);
+                Console.WriteLine("- /" + modCommand.Command + " (" + modCommand.Description + ")");
             }
-
         }
 
         public override string Command
         {
-            get { return "DimensionList"; }
+            get { return "DimHelp"; }
         }
+
+        public override string Description
+        {
+            get { return "Show this list"; }
+        }
+
         public override CommandType Type
         {
             get { return CommandType.Console; }

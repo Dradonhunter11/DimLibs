@@ -1,19 +1,27 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.Remoting.Messaging;
 using Dimlibs.API;
-using ReLogic.Utilities;
+using Dimlibs.Chunks;
+using log4net;
+using Mono.Cecil;
+using Mono.Cecil.Cil;
+using MonoMod.RuntimeDetour.HookGen;
 using Terraria;
-using Terraria.Localization;
 using Terraria.ModLoader;
-using Terraria.ModLoader.IO;
 
 namespace Dimlibs
 {
     public class Dimlibs : Mod
     {
         private string previousWorldPath;
+        internal static IList<ModCommand> commandsList = new List<ModCommand>();
+        internal static Dimlibs Instance;
+
+        public World tile = new World();
 
         public Dimlibs()
         {
@@ -25,70 +33,34 @@ namespace Dimlibs
 
         public override void Load()
         {
-            ReflectionUtil.MassSwap();
+            Instance = this;
+            ReflectionUtil.Load();
+            GetDimLibsCommand();
+            LoadModContent(mod =>
+            {
+                Autoload(mod);
+            });
+            MassPatcher.StartPatching();
         }
 
         public override void Unload()
         {
-            ReflectionUtil.MassSwap();
+            ReflectionUtil.Unload();
         }
 
-        public override void PostSetupContent()
+        public override void HandlePacket(BinaryReader reader, int whoAmI)
         {
-            /*FieldInfo uiModLoadInfo = typeof(Main).Assembly.GetType("Terraria.ModLoader.Interface")
-                .GetField("loadMods", BindingFlags.Instance | BindingFlags.NonPublic);
-            FieldInfo field = typeof(Main).Assembly.GetType("Terraria.ModLoader.UI.UILoadMods")
-                .GetField("SubProgressText", BindingFlags.Instance | BindingFlags.NonPublic);
-            typeof(Main).Assembly.GetType("Terraria.ModLoader.UI.UILoadMods")
-                .GetProperty("SubProgressText", BindingFlags.Instance | BindingFlags.Public).SetMethod.Invoke(uiModLoadInfo.GetValue(null), new object[] {"Autoload dimension"});*/
-            //Interface.loadMods.SubProgressText = Language.GetTextValue("tModLoader.MSFinishingResourceLoading");
-            LoadModContent(mod =>
-            {
-                //typeof(TmodFile).GetMethod("Read", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(mod, new object[] { TmodFile.LoadedState.Streaming, ReflectionUtil.GetEventDelegate() });
-                //mod.File?.Read(TmodFile.LoadedState.Streaming, mod.LoadResourceFromStream);
-                Autoload(mod);
-            });
+            DimensionNetwork.HandlePacket(reader, whoAmI);
         }
 
         public static string getPlayerDim()
         {
-            DimPlayer plr = Main.LocalPlayer.GetModPlayer<DimPlayer>();
-            return plr.getCurrentDimension();
-        }
-
-        public override void UpdateMusic(ref int music, ref MusicPriority musicPriority)
-        {
-            if (Main.myPlayer != -1 && Main.gameMenu && Main.LocalPlayer.name != "")
+            if (Main.netMode == 0)
             {
-                DimPlayer p = Main.player[Main.myPlayer].GetModPlayer<DimPlayer>();
-                FieldInfo info = typeof(LanguageManager).GetField("_localizedTexts", BindingFlags.Instance | BindingFlags.NonPublic);
-                Dictionary<string, LocalizedText> dictionary = info.GetValue(LanguageManager.Instance) as Dictionary<string, LocalizedText>;
-
-                FieldInfo textInfo = typeof(LocalizedText).GetField("value", BindingFlags.Instance | BindingFlags.NonPublic);
-                setDimensionPath(p, dictionary, textInfo);
+                return DimWorld.dimension;
             }
 
-            if (previousWorldPath != Main.worldPathName)
-            {
-                Console.Write(Main.worldPathName);
-            }
-
-            Object obj = DimWorld.dimensionInstanceHandlers;
-            previousWorldPath = Main.worldPathName;
-            
-        }
-
-        private static void setDimensionPath(DimPlayer p, Dictionary<string, LocalizedText> dictionary, FieldInfo textInfo)
-        {
-
-            if (getPlayerDim() != "overworld")
-            {
-                Main.WorldPath = Main.SavePath + "/World/" + getPlayerDim().Replace(' ', '_');
-            }
-            else if (getPlayerDim() == "overworld")
-            {
-                Main.WorldPath = Main.SavePath + "/World";
-            }
+            return Main.LocalPlayer.GetModPlayer<DimPlayer>().getServerDimension();
 
         }
 
@@ -116,7 +88,7 @@ namespace Dimlibs
         {
             //Object o = new OverworldHandler();
             int num = 0;
-            foreach (var mod in ModLoader.LoadedMods)
+            foreach (var mod in ModLoader.Mods)
             {
                 try
                 {
@@ -128,9 +100,137 @@ namespace Dimlibs
             }
         }
 
+        private void GetDimLibsCommand()
+        {
+            FieldInfo commandListInfo =
+                typeof(CommandManager).GetField("Commands", BindingFlags.Static | BindingFlags.NonPublic);
+            Dictionary<String, List<ModCommand>> tempDictionary = (Dictionary<string, List<ModCommand>>) commandListInfo.GetValue(null);
+            Dictionary<string, List<ModCommand>>.ValueCollection a = tempDictionary.Values;
+            foreach (var modCommandList in a)
+            {
+                foreach (var modCommand in modCommandList)
+                {
+                    if (modCommand.mod.Name == Name)
+                    {
+                        commandsList.Add(modCommand);
+                    }
+                }
+            }
+        }
+
         private void AutoloadDimension(Type type)
         {
             DimGenerator dimension = (DimGenerator) Activator.CreateInstance(type);
+        }
+
+        internal static class ILPatching
+        {
+            public static void load()
+            {
+                On.Terraria.Main.ClampScreenPositionToWorld += RemoveCameraLimit;
+                On.Terraria.Player.BordersMovement += RemoveBordersMovement;
+            }
+
+            private static void RemoveCameraLimit(On.Terraria.Main.orig_ClampScreenPositionToWorld orig)
+            {
+                return;
+            }
+
+            private static void RemoveBordersMovement(On.Terraria.Player.orig_BordersMovement orig, Player player)
+            {
+                return;
+            }
+        }
+
+        internal static class MassPatcher
+        {
+            internal static Type[] GetAllTypeInCurrentAssembly(Assembly asm)
+            {
+                return asm.GetTypes();
+            }
+
+            internal static MethodInfo[] GetAllMethodInAType(Type type)
+            {
+                return type.GetMethods();
+            }
+
+            public static void StartPatching()
+            {
+                //ILog log = LogManager.GetLogger("Mass Patcher");
+                var asm = Assembly.GetAssembly(typeof(Main));
+                foreach (var typeInfo in GetAllTypeInCurrentAssembly(asm))
+                {
+                    if (typeInfo.Namespace == null || typeInfo.Namespace.Contains("ModLoader"))
+                    {
+                        continue;
+                    }
+                    foreach (var methodInfo in GetAllMethodInAType(typeInfo))
+                    {
+                        try
+                        {
+                            SetLoadingStatusText("Currently patching " + typeInfo.FullName);
+                            MonoMod.RuntimeDetour.HookGen.HookEndpointManager.Modify(methodInfo, new ILManipulator(MassPatcher.ILEditing));
+                        }
+                        catch (Exception e)
+                        {
+                            //log.Error(e.Message, e);
+                        }                      
+                    }
+                }
+            }
+
+            internal static void ILEditing(HookIL il)
+            {
+                ILog log = LogManager.GetLogger("Mass Patcher");
+                PropertyInfo indexerInfo = typeof(Chunks.World).GetProperty("Item",
+                    BindingFlags.Public | BindingFlags.Instance, null, typeof(Tile),
+                    new Type[] { typeof(Int32), typeof(Int32) }, null);
+                MethodReference get_ItemReference = il.Import(indexerInfo.GetGetMethod());
+                MethodReference set_ItemReference = il.Import(indexerInfo.GetSetMethod());
+
+                log.Info(get_ItemReference);
+                log.Info(set_ItemReference);
+                foreach (var instruction in il.Body.Instructions)
+                {
+                    Object operandType = instruction.Operand;
+                    if (operandType != null && operandType is Mono.Cecil.FieldReference fieldRef)
+                    {
+                        FieldReference tileReference =
+                            il.Module.ImportReference(typeof(Dimlibs).GetField("tile",
+                                BindingFlags.Public | BindingFlags.Static));
+                        if (fieldRef.FullName.Contains("Terraria.Tile[0...,0...] Terraria.Main::tile") && instruction.OpCode == OpCodes.Ldsfld)
+                        {
+                            instruction.Operand = tileReference;
+                            instruction.OpCode = OpCodes.Ldsfld;
+
+                        }
+                    }
+
+                    if (instruction != null && instruction.Operand is Mono.Cecil.MethodReference reference)
+                    {
+                        if (reference.FullName.Contains("Terraria.Tile[0..., 0...]::Get(int32, int32)") && instruction.OpCode == OpCodes.Call)
+                        {
+                            instruction.OpCode = OpCodes.Callvirt;
+                            instruction.Operand = get_ItemReference;
+                        }
+                        if (reference.FullName.Contains("Terraria.Tile[0..., 0...]::Set(int32, int32, class Terraria.Tile)") && instruction.OpCode == OpCodes.Call)
+                        {
+                            instruction.OpCode = OpCodes.Callvirt;
+                            instruction.Operand = set_ItemReference;
+                        }
+                    }
+                }
+            }
+
+            public static void SetLoadingStatusText(string statusText)
+            {
+                Object uiModLoadInstance = typeof(Main).Assembly.GetType("Terraria.ModLoader.Interface")
+                    .GetField("loadMods", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null);
+                PropertyInfo subProgressText = typeof(Main).Assembly.GetType("Terraria.ModLoader.UI.UILoadMods")
+                    .GetProperty("SubProgressText", BindingFlags.Public | BindingFlags.Instance);
+                MethodInfo setProgressText = subProgressText.GetSetMethod();
+                setProgressText.Invoke(uiModLoadInstance, new object[] {statusText});
+            }
         }
     }
 }

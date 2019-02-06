@@ -8,22 +8,24 @@ using Terraria.ModLoader;
 
 namespace Dimlibs.Commands
 {
-    class DimensionList : ModCommand
+    class CurrentDimension : ModCommand
     {
         public override void Action(CommandCaller caller, string input, string[] args)
         {
-            Main.NewText("=== Current active dimension === ");
-            foreach (var dimKey in DimWorld.dimensionInstanceHandlers.Keys)
-            {
-                Console.WriteLine("- " + dimKey);
-            }
+            Console.WriteLine("Current dimension: " + DimWorld.dimension);
 
         }
 
         public override string Command
         {
-            get { return "DimensionList"; }
+            get { return "CurrentDimension"; }
         }
+
+        public override string Description
+        {
+            get { return "Show the current dimension you are in"; }
+        }
+
         public override CommandType Type
         {
             get { return CommandType.Console; }
