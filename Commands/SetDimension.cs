@@ -21,11 +21,17 @@ namespace Dimlibs.Commands
                     return;
                 }
 
-                if (Main.netMode != 1)
+                if (Main.netMode == 2)
                 {
                     Main.player[Main.LocalPlayer.whoAmI].GetModPlayer<DimPlayer>().serverCurrentDimension = args[0];
                     DimWorld.dimension = args[0];
                     DimWorld.update = true;
+                }
+
+                if (Main.netMode == 0)
+                {
+                    DimWorld.dimension = args[0];
+                    DimWorld.dimensionInstanceHandlers[args[0]].LoadWorld();
                 }
 
             }

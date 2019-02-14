@@ -8,36 +8,240 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using log4net;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using MonoMod.RuntimeDetour;
+using MonoMod.RuntimeDetour.HookGen;
 using Terraria;
 using Terraria.ID;
 using Terraria.IO;
+using Terraria.Map;
 using Terraria.ModLoader;
 using Terraria.Social;
 using Terraria.Utilities;
+using Terraria.World.Generation;
 
 namespace Dimlibs.API
 {
     public static class ReflectionUtil
     {
+        private static Hook do_worldGenCallBackHook;
+
         public static void Load()
         {
-            On.Terraria.IO.WorldFile.SaveWorldTiles += SaveWorldTiles;
             On.Terraria.IO.WorldFile.saveWorld_bool_bool += SaveWorld;
             On.Terraria.IO.WorldFile.loadWorld += LoadWorld;
+            MonoModHooks.RequestNativeAccess();
+            HookEndpointManager.Add(typeof(WorldGen).GetMethod("do_worldGenCallBack"),
+                new DimLibsHook.hook_do_worldGenCallBack(do_worldGenCallBack));
+            On.Terraria.Player.Spawn += Spawn;
+            On.Terraria.Main.DrawToMap_Section += DrawToMap_Section;
         }
 
         public static void Unload()
         {
-            On.Terraria.IO.WorldFile.SaveWorldTiles -= SaveWorldTiles;
             On.Terraria.IO.WorldFile.saveWorld_bool_bool -= SaveWorld;
             On.Terraria.IO.WorldFile.loadWorld -= LoadWorld;
+            On.Terraria.Player.Spawn -= Spawn;
+            On.Terraria.Main.DrawToMap_Section -= DrawToMap_Section;
         }
 
         public static Object Clone(Object self)
         {
             return typeof(Object).GetMethod("MemberwiseClone", BindingFlags.NonPublic | BindingFlags.Instance)
                 .Invoke(self, new object[] { });
+        }
+
+        public static void DrawToMap_Section(On.Terraria.Main.orig_DrawToMap_Section org, Main instance, int secX, int secY)
+        {
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            Microsoft.Xna.Framework.Color[] mapColorCacheArray = (Color[]) typeof(Main).GetField("_mapColorCacheArray", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null);
+            int num = secX * 200;
+            int num2 = num + 200;
+            int num3 = secY * 150;
+            int num4 = num3 + 150;
+            int num5 = num / Main.textureMaxWidth;
+            int num6 = num3 / Main.textureMaxHeight;
+            int num7 = num % Main.textureMaxWidth;
+            int num8 = num3 % Main.textureMaxHeight;
+
+            bool flag = (bool) typeof(Main).GetMethod("checkMap", BindingFlags.Instance | BindingFlags.NonPublic)
+                .Invoke(instance, new object[] {num5, num6});
+            if (!flag)
+            {
+                return;
+            }
+            int num9 = 0;
+            Microsoft.Xna.Framework.Color arg_6A_0 = Microsoft.Xna.Framework.Color.Transparent;
+            for (int i = num3; i < num4; i++)
+            {
+                for (int j = num; j < num2; j++)
+                {
+                    MapTile mapTile = Main.Map[j, i];
+                    mapColorCacheArray[num9] = MapHelper.GetMapTileXnaColor(ref mapTile);
+                    num9++;
+                }
+            }
+            try
+            {
+                instance.GraphicsDevice.SetRenderTarget(instance.mapTarget[num5, num6]);
+            }
+            catch (ObjectDisposedException)
+            {
+                Main.initMap[num5, num6] = false;
+                return;
+            }
+            Main.spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend);
+            double totalMilliseconds = stopwatch.Elapsed.TotalMilliseconds;
+            instance.mapSectionTexture.SetData<Microsoft.Xna.Framework.Color>(mapColorCacheArray, 0, mapColorCacheArray.Length);
+            double arg_128_0 = stopwatch.Elapsed.TotalMilliseconds;
+            totalMilliseconds = stopwatch.Elapsed.TotalMilliseconds;
+            Main.spriteBatch.Draw(instance.mapSectionTexture, new Vector2((float)num7, (float)num8), Microsoft.Xna.Framework.Color.White);
+            Main.spriteBatch.End();
+            instance.GraphicsDevice.SetRenderTarget(null);
+            double arg_17F_0 = stopwatch.Elapsed.TotalMilliseconds;
+            stopwatch.Stop();
+        }
+
+        public static void Spawn(On.Terraria.Player.orig_Spawn orig, Player instance)
+        {
+            Main.InitLifeBytes();
+            if (instance.whoAmI == Main.myPlayer)
+            {
+                if (Main.mapTime < 5)
+                {
+                    Main.mapTime = 5;
+                }
+                Main.quickBG = 10;
+                instance.FindSpawn();
+                if (!Player.CheckSpawn(instance.SpawnX, instance.SpawnY))
+                {
+                    instance.SpawnX = -1;
+                    instance.SpawnY = -1;
+                }
+                Main.maxQ = true;
+            }
+            if (Main.netMode == 1 && instance.whoAmI == Main.myPlayer)
+            {
+                NetMessage.SendData(12, -1, -1, null, Main.myPlayer, 0f, 0f, 0f, 0, 0, 0);
+                Main.gameMenu = false;
+            }
+            instance.headPosition = Vector2.Zero;
+            instance.bodyPosition = Vector2.Zero;
+            instance.legPosition = Vector2.Zero;
+            instance.headRotation = 0f;
+            instance.bodyRotation = 0f;
+            instance.legRotation = 0f;
+            instance.lavaTime = instance.lavaMax;
+            if (instance.statLife <= 0)
+            {
+                int num = instance.statLifeMax2 / 2;
+                instance.statLife = 100;
+                if (num > instance.statLife)
+                {
+                    instance.statLife = num;
+                }
+                instance.breath = instance.breathMax;
+                if (instance.spawnMax)
+                {
+                    instance.statLife = instance.statLifeMax2;
+                    instance.statMana = instance.statManaMax2;
+                }
+            }
+            instance.immune = true;
+            if (instance.dead)
+                PlayerHooks.OnRespawn(instance);
+            instance.dead = false;
+            instance.immuneTime = 0;
+            instance.active = true;
+            if (instance.SpawnX >= 0 && instance.SpawnY >= 0)
+            {
+                instance.position.X = (float)(instance.SpawnX * 16 + 8 - instance.width / 2);
+                instance.position.Y = (float)(instance.SpawnY * 16 - instance.height);
+            }
+            else
+            {
+                instance.position.X = (float)(Main.spawnTileX * 16 + 8 - instance.width / 2);
+                instance.position.Y = (float)(Main.spawnTileY * 16 - instance.height);
+                for (int i = Main.spawnTileX - 1; i < Main.spawnTileX + 2; i++)
+                {
+                    for (int j = Main.spawnTileY - 3; j < Main.spawnTileY; j++)
+                    {
+                        ILog log = LogManager.GetLogger("Temp dim logger");
+                        log.Info($"Spawn tile : {i} , {j}");
+                        log.Info($"World size : {Main.tile.Length}");
+                        if (Main.tile[i, j] != null)
+                        {
+                            if (Main.tileSolid[(int)Main.tile[i, j].type] && !Main.tileSolidTop[(int)Main.tile[i, j].type])
+                            {
+                                WorldGen.KillTile(i, j, false, false, false);
+                            }
+                            if (Main.tile[i, j].liquid > 0)
+                            {
+                                Main.tile[i, j].lava(false);
+                                Main.tile[i, j].liquid = 0;
+                                WorldGen.SquareTileFrame(i, j, true);
+                            }
+                        }
+                    }
+                }
+            }
+            instance.wet = false;
+            instance.wetCount = 0;
+            instance.lavaWet = false;
+            instance.fallStart = (int)(instance.position.Y / 16f);
+            instance.fallStart2 = instance.fallStart;
+            instance.velocity.X = 0f;
+            instance.velocity.Y = 0f;
+            for (int k = 0; k < 3; k++)
+            {
+                instance.UpdateSocialShadow();
+            }
+            instance.oldPosition = instance.position + instance.BlehOldPositionFixer;
+            instance.talkNPC = -1;
+            if (instance.whoAmI == Main.myPlayer)
+            {
+                Main.npcChatCornerItem = 0;
+            }
+            if (instance.pvpDeath)
+            {
+                instance.pvpDeath = false;
+                instance.immuneTime = 300;
+                instance.statLife = instance.statLifeMax;
+            }
+            else
+            {
+                instance.immuneTime = 60;
+            }
+            if (instance.whoAmI == Main.myPlayer)
+            {
+                Main.BlackFadeIn = 255;
+                Main.renderNow = true;
+                if (Main.netMode == 1)
+                {
+                    Netplay.newRecent();
+                }
+                Main.screenPosition.X = instance.position.X + (float)(instance.width / 2) - (float)(Main.screenWidth / 2);
+                Main.screenPosition.Y = instance.position.Y + (float)(instance.height / 2) - (float)(Main.screenHeight / 2);
+            }
+        }
+
+        public static void do_worldGenCallBack(DimLibsHook.orig_do_worldGenCallBack orig, object threadContext)
+        {
+            Main.PlaySound(10, -1, -1, 1, 1f, 0f);
+            foreach (DimensionHandler handler in DimWorld.dimensionInstanceHandlers.Values)
+            {
+                WorldGen.clearWorld();
+                handler.generator.GenerateDimension(Main.ActiveWorldFileData.Seed, threadContext as GenerationProgress);
+                handler.Save();
+            }
+            WorldFile.saveWorld(Main.ActiveWorldFileData.IsCloudSave, true);
+            if (Main.menuMode == 10 || Main.menuMode == 888)
+            {
+                Main.menuMode = 6;
+            }
+            Main.PlaySound(10, -1, -1, 1, 1f, 0f);
         }
 
         private static int SaveWorldTiles(On.Terraria.IO.WorldFile.orig_SaveWorldTiles orig, BinaryWriter writer)
@@ -234,127 +438,14 @@ namespace Dimlibs.API
 
         public static void SaveWorld(On.Terraria.IO.WorldFile.orig_saveWorld_bool_bool orig, bool useCloudSaving, bool resetTime = false)
         {
-            FieldInfo padLockInfo = typeof(WorldFile).GetField("padlock", BindingFlags.Static | BindingFlags.NonPublic);
-            Object padlock = padLockInfo.GetValue(null);
-
-            FieldInfo HasCacheInfo = typeof(WorldFile).GetField("HasCache", BindingFlags.Static | BindingFlags.NonPublic);
-            bool HasCache = (bool)HasCacheInfo.GetValue(null);
-
-            MethodInfo Save = typeof(Main).Assembly.GetType("Terraria.ModLoader.IO.WorldIO").GetMethod("Save",
-                BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
-
-            foreach (DimensionHandler dim in DimWorld.dimensionInstanceHandlers.Values)
-            {
-                dim.Save();
-            }
-            /*if (useCloudSaving && SocialAPI.Cloud == null)
-            {
-                return;
-            }
-            if (Main.worldName == "")
-            {
-                Main.worldName = "World";
-            }
-            if (WorldGen.saveLock)
-            {
-                return;
-            }
-            WorldGen.saveLock = true;
-            while (WorldGen.IsGeneratingHardMode)
-            {
-                Main.statusText = Lang.gen[48].Value;
-            }
-            lock (padlock)
-            {
-                try
-                {
-                    Directory.CreateDirectory(Main.WorldPath);
-                }
-                catch
-                {
-                }
-                if (Main.skipMenu)
-                {
-                    return;
-                }
-                if (HasCache)
-                {
-                    typeof(WorldFile).GetMethod("SetTempToCache", BindingFlags.Static | BindingFlags.NonPublic)
-                        .Invoke(null, new object[] { });
-                }
-                else
-                {
-                    typeof(WorldFile).GetMethod("SetTempToOngoing", BindingFlags.Static | BindingFlags.NonPublic)
-                        .Invoke(null, new object[] { });
-                }
-                if (resetTime)
-                {
-                    typeof(WorldFile).GetMethod("ResetTempsToDayTime", BindingFlags.Static | BindingFlags.NonPublic)
-                        .Invoke(null, new object[] { });
-                }
-                if (Main.worldPathName == null)
-                {
-                    return;
-                }
-                Stopwatch stopwatch = new Stopwatch();
-                stopwatch.Start();
-                byte[] array = null;
-                int num = 0;
-                using (MemoryStream memoryStream = new MemoryStream(7000000))
-                {
-                    using (BinaryWriter binaryWriter = new BinaryWriter(memoryStream))
-                    {
-                        WorldFile.SaveWorld_Version2(binaryWriter);
-                    }
-                    array = memoryStream.ToArray();
-                    num = array.Length;
-                }
-                if (array == null)
-                {
-                    return;
-                }
-                byte[] array2 = null;
-                if (FileUtilities.Exists(Main.worldPathName, useCloudSaving))
-                {
-                    array2 = FileUtilities.ReadAllBytes(Main.worldPathName, useCloudSaving);
-                }
-                FileUtilities.Write(Main.worldPathName, array, num, useCloudSaving);
-                array = FileUtilities.ReadAllBytes(Main.worldPathName, useCloudSaving);
-                string text = null;
-                using (MemoryStream memoryStream2 = new MemoryStream(array, 0, num, false))
-                {
-                    using (BinaryReader binaryReader = new BinaryReader(memoryStream2))
-                    {
-                        if (!Main.validateSaves || WorldFile.validateWorld(binaryReader))
-                        {
-                            if (array2 != null)
-                            {
-                                text = Main.worldPathName + ".bak";
-                                Main.statusText = Lang.gen[50].Value;
-                            }
-                        }
-                        else
-                        {
-                            text = Main.worldPathName;
-                        }
-                    }
-                }
-                if (text != null && array2 != null)
-                {
-                    FileUtilities.WriteAllBytes(text, array2, useCloudSaving);
-                }
-                Save.Invoke(null, new Object[] { Main.ActiveWorldFileData.Path, useCloudSaving });
-                WorldGen.saveLock = false;
-            }
-            Main.serverGenLock = false;*/
+            orig.Invoke(useCloudSaving, resetTime);
+            DimWorld.dimensionInstanceHandlers[DimWorld.dimension].Save();
         }
 
         public static void LoadWorld(On.Terraria.IO.WorldFile.orig_loadWorld orig, bool loadFromCloud)
         {
-            foreach (DimensionHandler dim in DimWorld.dimensionInstanceHandlers.Values)
-            {
-                dim.LoadWorld();   
-            }
+            orig.Invoke(loadFromCloud);
+            DimWorld.dimensionInstanceHandlers[DimWorld.dimension].LoadWorld();
         }
     }
 }

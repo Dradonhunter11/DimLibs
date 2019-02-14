@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Xna.Framework.Graphics;
 using Terraria;
 using Terraria.GameContent.Generation;
 using Terraria.IO;
@@ -17,8 +18,8 @@ namespace Dimlibs.API
     public abstract class DimGenerator
     {
         internal bool isGenerating = false;
-        internal static string dimensionName;
-        internal static DimensionHandler handler;
+        internal string dimensionName;
+        internal DimensionHandler handler;
 
         protected int copper;
         protected int iron;
@@ -159,9 +160,21 @@ namespace Dimlibs.API
             //WorldHooks.PostWorldGen();
         }
 
+        /// <summary>
+        /// Allow you to draw your own custom loading background
+        /// Return false if you want to make the default one draw
+        /// </summary>
+        /// <param name="spriteBatch"></param>
+        /// <returns></returns>
+        public virtual bool DrawCustomBackground(SpriteBatch spriteBatch)
+        {
+            return false;
+        }
+
         public DimGenerator(String dimensionName)
         {
             handler = new DimensionHandler(this, dimensionName);
+            this.dimensionName = dimensionName;
         }
     }
 }

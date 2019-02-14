@@ -30,20 +30,12 @@ namespace Dimlibs
         {
             TagCompound tag = new TagCompound();
             tag.Add("dimension", serverCurrentDimension);
-            List<float> position = new List<float>(){player.position.X, player.position.Y};
-            tag.Add(Main.ActiveWorldFileData.Name, position);
             return tag;
         }
 
         public override void Load(TagCompound tag)
         {
             serverCurrentDimension = tag.GetString("dimension");
-
-            if (tag.ContainsKey(Main.ActiveWorldFileData.Name))
-            {
-                List<float> position = (List<float>)tag.GetList<float>(Main.ActiveWorldFileData.Name);
-                player.position = new Vector2(position[0], position[1]);
-            }
         }
 
         public override void OnEnterWorld(Player player)

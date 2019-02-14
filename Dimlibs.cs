@@ -40,12 +40,17 @@ namespace Dimlibs
             {
                 Autoload(mod);
             });
-            MassPatcher.StartPatching();
+            //MassPatcher.StartPatching();
         }
 
         public override void Unload()
         {
             ReflectionUtil.Unload();
+        }
+
+        public override void PostSetupContent()
+        {
+            LoadModContent(Autoload);
         }
 
         public override void HandlePacket(BinaryReader reader, int whoAmI)
@@ -121,6 +126,12 @@ namespace Dimlibs
         private void AutoloadDimension(Type type)
         {
             DimGenerator dimension = (DimGenerator) Activator.CreateInstance(type);
+            DimWorld.dimensionInstanceHandlers[dimension.dimensionName] = dimension.handler;
+            ILog logger = LogManager.GetLogger("Kaboom");
+            foreach (string str in DimWorld.dimensionInstanceHandlers.Keys)
+            {
+                logger.Info(str);
+            }
         }
 
         internal static class ILPatching

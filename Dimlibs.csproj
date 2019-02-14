@@ -37,8 +37,10 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="API\DimensionHandler.cs" />
+    <Compile Include="API\DimensionHelper.cs" />
     <Compile Include="API\DimGenerator.cs" />
     <Compile Include="API\DimItem.cs" />
+    <Compile Include="API\DimLibsHook.cs" />
     <Compile Include="API\DimTile.cs" />
     <Compile Include="API\OverworldHandler.cs" />
     <Compile Include="API\ReflectionUtil.cs" />
@@ -59,6 +61,7 @@
     <Compile Include="Dimlibs.cs" />
     <Compile Include="DimPlayer.cs" />
     <Compile Include="DimWorld.cs" />
+    <Compile Include="UI\UIDimensionLoading.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="log4net">
@@ -98,9 +101,10 @@
     <Reference Include="TerrariaHooks">
       <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Terraria\TerrariaHooks.dll</HintPath>
     </Reference>
+    <Reference Include="WindowsBase" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>"D:\steam game\steamapps\steamapps\common\Terraria\tModLoaderServer.exe" -build "$(ProjectDir)\" -eac "$(TargetPath)"</PostBuildEvent>
+    <PostBuildEvent>"C:\Program Files (x86)\Steam\steamapps\common\Terraria\tModLoaderServer.exe" -build "$(ProjectDir)\" -eac "$(TargetPath)"</PostBuildEvent>
   </PropertyGroup>
 </Project>
