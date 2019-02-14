@@ -39,7 +39,7 @@ namespace Dimlibs.UI
                 Vector2 position = new Vector2(Main.screenWidth / 2, Main.screenHeight / 2) -
                                    Main.fontDeathText.MeasureString(Main.statusText) / 2;
                 Utils.DrawBorderStringFourWay(spriteBatch, Main.fontDeathText, Main.statusText, position.X, position.Y,
-                    Color.Gray, Color.Black, Vector2.Zero, 0.75f);
+                    Color.White, Color.Black, Vector2.Zero, 0.75f);
             }
         }
     }

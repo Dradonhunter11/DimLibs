@@ -953,7 +953,6 @@ namespace Dimlibs.API
 
         public void LoadWorld()
         {
-            String progress = "";
 
             Main.gameMenu = true;
             Main.menuMode = 888;
@@ -962,41 +961,11 @@ namespace Dimlibs.API
             
         }
 
-        private static void DrawProgress()
-        {
-            Viewport dimension = Main.graphics.GraphicsDevice.Viewport;
-            Texture2D texture = Dimlibs.Instance.GetTexture("Texture/LoadingScreen1");
-            ILog log = LogManager.GetLogger("Dimension Loading");
-
-            try
-            {
-                for (int i = 0; i < dimension.Width; i += texture.Width)
-                {
-                    for (int j = 0; j < dimension.Height; j += texture.Height)
-                    {
-                        Main.spriteBatch.Draw(texture, new Rectangle(i, j, texture.Width, texture.Height), null, Color.White, 0f,
-                            Vector2.Zero, SpriteEffects.None, 0f);
-                    }
-                }
-
-                ChatManager.DrawColorCodedStringWithShadow(Main.spriteBatch, Main.fontDeathText, Main.statusText,
-                    new Vector2(Main.screenWidth / 2, Main.screenHeight) -
-                    Main.fontDeathText.MeasureString(Main.statusText) / 2, Color.White, 0f, Vector2.Zero, Vector2.One, 1f, 2f);
-            }
-            catch (Exception e)
-            {
-                log.Error("An exception happened while loading the dimension : " + e.Message, e);
-            }
-
-            
-
-        }
-
         public void do_LoadDimensionCallBack(object ThreadContext)
         {
             try
             {
-                Load(ThreadContext as string);
+                Load();
             }
             catch (Exception e)
             {
@@ -1005,24 +974,20 @@ namespace Dimlibs.API
             }
         }
 
-        public void Load(string statusText)
+        public void Load()
         {
             bool[] importance = null;
             int[] position = null;
 
-            statusText = "Loading save file header...";
-            Main.statusText = statusText;
+            Main.statusText = "Loading save file header...";
             LoadFileFormatTrueHeader(out importance, out position);
-            statusText = "Loading world size data...";
-            Main.statusText = statusText;
+            Main.statusText = "Loading world size data...";
             LoadHeader();
-            statusText = "Attempting to load NPC data";
-            Main.statusText = statusText;
+            Main.statusText = "Attempting to load NPC data";
             LoadNPC();
-            statusText = "Loading the tile, really important";
-            Main.statusText = statusText;
+            Main.statusText = "Loading the tile, really important";
             LoadTile(importance);
-            Main.statusText = statusText;
+            Main.statusText = "Loading chest data";
             LoadChests();
             Main.statusText = "Loading modded data";
             LoadModdedStuff();
