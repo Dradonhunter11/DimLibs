@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.Remoting.Messaging;
 using Dimlibs.API;
 using Dimlibs.Chunks;
 using log4net;
@@ -23,23 +22,20 @@ namespace Dimlibs
 
         public World tile = new World();
 
-        public Dimlibs()
-        {
-            Properties = new ModProperties()
-            {
-                Autoload = true
-            };
-        }
-
         public override void Load()
         {
             Instance = this;
             ReflectionUtil.Load();
             GetDimLibsCommand();
-            LoadModContent(mod =>
+            for (int i = 0; i < ModLoader.Mods.Length; i++)
             {
-                Autoload(mod);
-            });
+                Mod mod = ModLoader.Mods[i];
+                try
+                {
+                    Autoload(mod);
+                }
+                catch { }
+            }
             //MassPatcher.StartPatching();
         }
 
@@ -50,13 +46,22 @@ namespace Dimlibs
 
         public override void PostSetupContent()
         {
-            LoadModContent(Autoload);
+            // LoadModContent(Autoload);
+            for (int i = 0; i < ModLoader.Mods.Length; i++)
+            {
+                Mod mod = ModLoader.Mods[i];
+                try
+                {
+                    Autoload(mod);
+                }
+                catch
+                {
+                    mod.Logger.InfoFormat("Failure to autoload dimensions for mod {0}", mod.DisplayName);
+                }
+            }
         }
 
-        public override void HandlePacket(BinaryReader reader, int whoAmI)
-        {
-            DimensionNetwork.HandlePacket(reader, whoAmI);
-        }
+        public override void HandlePacket(BinaryReader reader, int whoAmI) => DimensionNetwork.HandlePacket(reader, whoAmI);
 
         public static string getPlayerDim()
         {
@@ -66,41 +71,30 @@ namespace Dimlibs
             }
 
             return Main.LocalPlayer.GetModPlayer<DimPlayer>().getServerDimension();
-
         }
 
         internal void Autoload(Mod mod)
         {
-
             if (mod.Code == null)
                 return;
 
-            foreach (Type type in mod.Code.GetTypes().OrderBy(type => type.FullName, StringComparer.InvariantCulture))
+            TypeInfo[] array = mod.Code.DefinedTypes.OrderBy(type => type.FullName)
+                .ToArray();
+            for (int i = 0; i < array.Length; i++)
             {
-                /*if (type.IsAbstract || type.GetConstructor(new Type[0]) == null)//don't autoload things with no default constructor
-                {
-                    continue;
-                }*/
+                Type type = array[i];
+
+                /*
+                 * if (type.IsAbstract || type.GetConstructor(new Type[0]) == null) //don't autoload things with no default constructor
+                 * {
+                 * continue;
+                 * }
+                 */
+
+                // if (typeof(DimGenerator).IsAssignableFrom(type))
                 if (type.IsSubclassOf(typeof(DimGenerator)))
                 {
                     AutoloadDimension(type);
-                }
-                
-            }
-        }
-
-        private static void LoadModContent(Action<Mod> loadAction)
-        {
-            //Object o = new OverworldHandler();
-            int num = 0;
-            foreach (var mod in ModLoader.Mods)
-            {
-                try
-                {
-                    loadAction(mod);
-                }
-                catch (Exception e)
-                {
                 }
             }
         }
@@ -136,20 +130,12 @@ namespace Dimlibs
 
         internal static class ILPatching
         {
-            public static void load()
+            public static void Load()
             {
-                On.Terraria.Main.ClampScreenPositionToWorld += RemoveCameraLimit;
-                On.Terraria.Player.BordersMovement += RemoveBordersMovement;
-            }
-
-            private static void RemoveCameraLimit(On.Terraria.Main.orig_ClampScreenPositionToWorld orig)
-            {
-                return;
-            }
-
-            private static void RemoveBordersMovement(On.Terraria.Player.orig_BordersMovement orig, Player player)
-            {
-                return;
+                On.Terraria.Main.ClampScreenPositionToWorld += orig =>
+                { return; };
+                On.Terraria.Player.BordersMovement += (orig, player) =>
+                { return; };
             }
         }
 
@@ -169,22 +155,26 @@ namespace Dimlibs
             {
                 //ILog log = LogManager.GetLogger("Mass Patcher");
                 var asm = Assembly.GetAssembly(typeof(Main));
-                foreach (var typeInfo in GetAllTypeInCurrentAssembly(asm))
+                Type[] array = GetAllTypeInCurrentAssembly(asm);
+                for (int i = 0; i < array.Length; i++)
                 {
+                    Type typeInfo = array[i];
                     if (typeInfo.Namespace == null || typeInfo.Namespace.Contains("ModLoader"))
                     {
                         continue;
                     }
-                    foreach (var methodInfo in GetAllMethodInAType(typeInfo))
+                    MethodInfo[] array1 = GetAllMethodInAType(typeInfo);
+                    for (int i1 = 0; i1 < array1.Length; i1++)
                     {
+                        MethodInfo methodInfo = array1[i1];
                         try
                         {
                             SetLoadingStatusText("Currently patching " + typeInfo.FullName);
-                            MonoMod.RuntimeDetour.HookGen.HookEndpointManager.Modify(methodInfo, new ILManipulator(MassPatcher.ILEditing));
+                            HookEndpointManager.Modify(methodInfo, new ILManipulator(ILEditing));
                         }
                         catch (Exception e)
                         {
-                            //log.Error(e.Message, e);
+                            Instance.Logger.Error("Failed to patch ", e);
                         }                      
                     }
                 }
@@ -204,7 +194,7 @@ namespace Dimlibs
                 foreach (var instruction in il.Body.Instructions)
                 {
                     Object operandType = instruction.Operand;
-                    if (operandType != null && operandType is Mono.Cecil.FieldReference fieldRef)
+                    if (operandType != null && operandType is FieldReference fieldRef)
                     {
                         FieldReference tileReference =
                             il.Module.ImportReference(typeof(Dimlibs).GetField("tile",
