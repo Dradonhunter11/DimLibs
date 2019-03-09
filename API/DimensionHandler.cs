@@ -3,7 +3,9 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
@@ -14,11 +16,14 @@ using Terraria.ID;
 using Terraria.IO;
 using Terraria.Localization;
 using Terraria.Map;
+using Terraria.ModLoader;
+using Terraria.Social;
+using Terraria.Utilities;
 using ChatManager = Terraria.UI.Chat.ChatManager;
 
 namespace Dimlibs.API
 {
-    internal class DimensionHandler
+    public sealed class DimensionHandler
     {
         private Tile[,] dimensionTile;
         private readonly Projectile[] instanceProjectileArray;
@@ -545,6 +550,400 @@ namespace Dimlibs.API
 
         }
 
+        public void SaveMap()
+        {
+            FieldInfo saveLockInfo =
+                typeof(MapHelper).GetField("saveLock", BindingFlags.Static | BindingFlags.NonPublic);
+            ushort modPosition = (ushort) typeof(MapHelper).GetStaticPrivateField("modPosition").GetStaticValue();
+            ushort tilePosition = (ushort) typeof(MapHelper).GetStaticPrivateField("tilePosition").GetStaticValue();
+            ushort wallPosition = (ushort) typeof(MapHelper).GetStaticPrivateField("wallPosition").GetStaticValue();
+            ushort liquidPosition = (ushort) typeof(MapHelper).GetStaticPrivateField("liquidPosition").GetStaticValue();
+            ushort dirtPosition = (ushort) typeof(MapHelper).GetStaticPrivateField("dirtPosition").GetStaticValue();
+            ushort hellPosition = (ushort) typeof(MapHelper).GetStaticPrivateField("hellPosition").GetStaticValue();
+            ushort skyPosition = (ushort) typeof(MapHelper).GetStaticPrivateField("skyPosition").GetStaticValue();
+            ushort rockPosition = (ushort) typeof(MapHelper).GetStaticPrivateField("rockPosition").GetStaticValue();
+            bool isCloudSave = Main.ActivePlayerFileData.IsCloudSave;
+            if (isCloudSave && SocialAPI.Cloud == null)
+            {
+                return;
+            }
+
+            if (!Main.mapEnabled || (bool) saveLockInfo.GetStaticValue())
+            {
+                return;
+            }
+
+            string text = Main.playerPathName.Substring(0, Main.playerPathName.Length - 4);
+            lock (typeof(MapHelper).GetField("padlock", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null))
+            {
+                try
+                {
+                    saveLockInfo.SetStaticValue(true);
+                    try
+                    {
+                        if (!isCloudSave)
+                        {
+                            Directory.CreateDirectory(text);
+                        }
+                    }
+                    catch
+                    {
+                    }
+
+                    text += Path.DirectorySeparatorChar;
+                    if (Main.ActiveWorldFileData.UseGuidAsMapName)
+                    {
+                        text = text + Main.ActiveWorldFileData.UniqueId.ToString() + ".map";
+                    }
+                    else
+                    {
+                        text = text + Main.worldID + ".map";
+                    }
+
+                    Stopwatch stopwatch = new Stopwatch();
+                    stopwatch.Start();
+                    bool flag2 = false;
+                    if (!Main.gameMenu)
+                    {
+                        flag2 = true;
+                    }
+
+                    using (MemoryStream memoryStream = new MemoryStream(4000))
+                    {
+                        using (BinaryWriter binaryWriter = new BinaryWriter(memoryStream))
+                        {
+                            using (DeflateStream deflateStream =
+                                new DeflateStream(memoryStream, CompressionMode.Compress))
+                            {
+                                int num = 0;
+                                byte[] array = new byte[16384];
+                                binaryWriter.Write(194);
+                                Main.MapFileMetadata.IncrementAndWrite(binaryWriter);
+                                binaryWriter.Write(Main.worldName);
+                                binaryWriter.Write(Main.worldID);
+                                binaryWriter.Write(Main.maxTilesY);
+                                binaryWriter.Write(Main.maxTilesX);
+                                binaryWriter.Write((short) 470);
+                                binaryWriter.Write((short) 231);
+                                binaryWriter.Write((short) 3);
+                                binaryWriter.Write((short) 256);
+                                binaryWriter.Write((short) 256);
+                                binaryWriter.Write((short) 256);
+                                byte b = 1;
+                                byte b2 = 0;
+                                int i;
+                                for (i = 0; i < 470; i++)
+                                {
+                                    if (MapHelper.tileOptionCounts[i] != 1)
+                                    {
+                                        b2 |= b;
+                                    }
+
+                                    if (b == 128)
+                                    {
+                                        binaryWriter.Write(b2);
+                                        b2 = 0;
+                                        b = 1;
+                                    }
+                                    else
+                                    {
+                                        b = (byte) (b << 1);
+                                    }
+                                }
+
+                                if (b != 1)
+                                {
+                                    binaryWriter.Write(b2);
+                                }
+
+                                i = 0;
+                                b = 1;
+                                b2 = 0;
+                                while (i < 231)
+                                {
+                                    if (MapHelper.wallOptionCounts[i] != 1)
+                                    {
+                                        b2 |= b;
+                                    }
+
+                                    if (b == 128)
+                                    {
+                                        binaryWriter.Write(b2);
+                                        b2 = 0;
+                                        b = 1;
+                                    }
+                                    else
+                                    {
+                                        b = (byte) (b << 1);
+                                    }
+
+                                    i++;
+                                }
+
+                                if (b != 1)
+                                {
+                                    binaryWriter.Write(b2);
+                                }
+
+                                for (i = 0; i < 470; i++)
+                                {
+                                    if (MapHelper.tileOptionCounts[i] != 1)
+                                    {
+                                        binaryWriter.Write((byte) MapHelper.tileOptionCounts[i]);
+                                    }
+                                }
+
+                                for (i = 0; i < 231; i++)
+                                {
+                                    if (MapHelper.wallOptionCounts[i] != 1)
+                                    {
+                                        binaryWriter.Write((byte) MapHelper.wallOptionCounts[i]);
+                                    }
+                                }
+
+                                binaryWriter.Flush();
+                                for (int j = 0; j < Main.maxTilesY; j++)
+                                {
+                                    if (!flag2)
+                                    {
+                                        float num2 = (float) j / (float) Main.maxTilesY;
+                                        Main.statusText = string.Concat(new object[]
+                                        {
+                                            Lang.gen[66].Value,
+                                            " ",
+                                            (int) (num2 * 100f + 1f),
+                                            "%"
+                                        });
+                                    }
+
+                                    for (int k = 0; k < Main.maxTilesX; k++)
+                                    {
+                                        MapTile mapTile = Main.Map[k, j];
+                                        byte b4;
+                                        byte b3 = b4 = 0;
+                                        bool flag3 = true;
+                                        bool flag4 = true;
+                                        int num3 = 0;
+                                        int num4 = 0;
+                                        byte b5 = 0;
+                                        int num5;
+                                        ushort num6;
+                                        int num7;
+                                        if (mapTile.Light <= 18 || mapTile.Type >= modPosition)
+                                        {
+                                            flag4 = false;
+                                            flag3 = false;
+                                            num5 = 0;
+                                            num6 = 0;
+                                            num7 = 0;
+                                            int num8 = k + 1;
+                                            int l = Main.maxTilesX - k - 1;
+                                            while (l > 0)
+                                            {
+                                                if (Main.Map[num8, j].Light > 18)
+                                                {
+                                                    break;
+                                                }
+
+                                                num7++;
+                                                l--;
+                                                num8++;
+                                            }
+                                        }
+                                        else
+                                        {
+                                            b5 = mapTile.Color;
+                                            num6 = mapTile.Type;
+                                            if (num6 < wallPosition)
+                                            {
+                                                num5 = 1;
+                                                num6 -= tilePosition;
+                                            }
+                                            else if (num6 < liquidPosition)
+                                            {
+                                                num5 = 2;
+                                                num6 -= wallPosition;
+                                            }
+                                            else if (num6 < skyPosition)
+                                            {
+                                                num5 = (int) (3 + (num6 - liquidPosition));
+                                                flag3 = false;
+                                            }
+                                            else if (num6 < dirtPosition)
+                                            {
+                                                num5 = 6;
+                                                flag4 = false;
+                                                flag3 = false;
+                                            }
+                                            else if (num6 < hellPosition)
+                                            {
+                                                num5 = 7;
+                                                if (num6 < rockPosition)
+                                                {
+                                                    num6 -= dirtPosition;
+                                                }
+                                                else
+                                                {
+                                                    num6 -= rockPosition;
+                                                }
+                                            }
+                                            else
+                                            {
+                                                num5 = 6;
+                                                flag3 = false;
+                                            }
+
+                                            if (mapTile.Light == 255)
+                                            {
+                                                flag4 = false;
+                                            }
+
+                                            if (flag4)
+                                            {
+                                                num7 = 0;
+                                                int num8 = k + 1;
+                                                int l = Main.maxTilesX - k - 1;
+                                                num3 = num8;
+                                                while (l > 0)
+                                                {
+                                                    MapTile mapTile2 = Main.Map[num8, j];
+                                                    if (!mapTile.EqualsWithoutLight(ref mapTile2))
+                                                    {
+                                                        num4 = num8;
+                                                        break;
+                                                    }
+
+                                                    l--;
+                                                    num7++;
+                                                    num8++;
+                                                }
+                                            }
+                                            else
+                                            {
+                                                num7 = 0;
+                                                int num8 = k + 1;
+                                                int l = Main.maxTilesX - k - 1;
+                                                while (l > 0)
+                                                {
+                                                    MapTile mapTile3 = Main.Map[num8, j];
+                                                    if (!mapTile.Equals(ref mapTile3))
+                                                    {
+                                                        break;
+                                                    }
+
+                                                    l--;
+                                                    num7++;
+                                                    num8++;
+                                                }
+                                            }
+                                        }
+
+                                        if (b5 > 0)
+                                        {
+                                            b3 |= (byte) (b5 << 1);
+                                        }
+
+                                        if (b3 != 0)
+                                        {
+                                            b4 |= 1;
+                                        }
+
+                                        b4 |= (byte) (num5 << 1);
+                                        if (flag3 && num6 > 255)
+                                        {
+                                            b4 |= 16;
+                                        }
+
+                                        if (flag4)
+                                        {
+                                            b4 |= 32;
+                                        }
+
+                                        if (num7 > 0)
+                                        {
+                                            if (num7 > 255)
+                                            {
+                                                b4 |= 128;
+                                            }
+                                            else
+                                            {
+                                                b4 |= 64;
+                                            }
+                                        }
+
+                                        array[num] = b4;
+                                        num++;
+                                        if (b3 != 0)
+                                        {
+                                            array[num] = b3;
+                                            num++;
+                                        }
+
+                                        if (flag3)
+                                        {
+                                            array[num] = (byte) num6;
+                                            num++;
+                                            if (num6 > 255)
+                                            {
+                                                array[num] = (byte) (num6 >> 8);
+                                                num++;
+                                            }
+                                        }
+
+                                        if (flag4)
+                                        {
+                                            array[num] = mapTile.Light;
+                                            num++;
+                                        }
+
+                                        if (num7 > 0)
+                                        {
+                                            array[num] = (byte) num7;
+                                            num++;
+                                            if (num7 > 255)
+                                            {
+                                                array[num] = (byte) (num7 >> 8);
+                                                num++;
+                                            }
+                                        }
+
+                                        for (int m = num3; m < num4; m++)
+                                        {
+                                            array[num] = Main.Map[m, j].Light;
+                                            num++;
+                                        }
+
+                                        k += num7;
+                                        if (num >= 4096)
+                                        {
+                                            deflateStream.Write(array, 0, num);
+                                            num = 0;
+                                        }
+                                    }
+                                }
+
+                                if (num > 0)
+                                {
+                                    deflateStream.Write(array, 0, num);
+                                }
+
+                                deflateStream.Dispose();
+                                FileUtilities.WriteAllBytes(text, memoryStream.ToArray(), isCloudSave);
+                                //patch file: text
+                            }
+                        }
+                    }
+
+                    typeof(Main).Assembly.GetType("Terraria.ModLoader.IO.MapIO")
+                        .InvokeStaticMethod("WriteModFile", new object[] {text, isCloudSave});
+                }
+                catch(Exception e)
+                {
+                    
+                }
+            }
+        }
+
         public void LoadHeader()
         {
             string headerPath = Path.Combine(Main.ActiveWorldFileData.Path.Replace(".wld", ""), dimensionName) + "/header.data";
@@ -992,6 +1391,7 @@ namespace Dimlibs.API
             Main.statusText = "Loading modded data";
             LoadModdedStuff();
             Main.statusText = "done";
+            WorldGen.EveryTileFrame();
             Main.LocalPlayer.Spawn();
         }
     }

@@ -14,6 +14,7 @@ using Microsoft.Xna.Framework.Graphics;
 using MonoMod.RuntimeDetour;
 using MonoMod.RuntimeDetour.HookGen;
 using Terraria;
+using Terraria.GameContent.UI.States;
 using Terraria.ID;
 using Terraria.IO;
 using Terraria.Map;
@@ -26,17 +27,43 @@ namespace Dimlibs.API
 {
     public static class ReflectionUtil
     {
-        private static Hook do_worldGenCallBackHook;
+
+        public static void SetStaticValue(this FieldInfo info, object value)
+        {
+            info.SetValue(null, value);
+        }
+
+        public static object GetStaticValue(this FieldInfo info)
+        {
+            return info.GetValue(null);
+        }
+
+        public static FieldInfo GetStaticPrivateField(this Type type, string fieldName)
+        {
+            return type.GetField(fieldName, BindingFlags.Static | BindingFlags.NonPublic);
+        }
+
+        public static FieldInfo GetInstancePrivateField(this Type type, string fieldName)
+        {
+            return type.GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic);
+        }
+
+        public static object InvokeStaticMethod(this Type type, string methodName, object[] args)
+        {
+            return type.GetMethod(methodName,
+                    BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
+                .Invoke(null, args);
+        }
 
         public static void Load()
         {
             On.Terraria.IO.WorldFile.saveWorld_bool_bool += SaveWorld;
             On.Terraria.IO.WorldFile.loadWorld += LoadWorld;
             MonoModHooks.RequestNativeAccess();
-            HookEndpointManager.Add(typeof(WorldGen).GetMethod("do_worldGenCallBack"),
-                new DimLibsHook.hook_do_worldGenCallBack(do_worldGenCallBack));
+            DimLibsHook.do_worldGenCallBack_Hook += do_worldGenCallBack;
             On.Terraria.Player.Spawn += Spawn;
             On.Terraria.Main.DrawToMap_Section += DrawToMap_Section;
+            On.Terraria.GameContent.UI.States.UIWorldLoad.DrawSelf += DrawSelfLoad;
         }
 
         public static void Unload()
@@ -45,12 +72,30 @@ namespace Dimlibs.API
             On.Terraria.IO.WorldFile.loadWorld -= LoadWorld;
             On.Terraria.Player.Spawn -= Spawn;
             On.Terraria.Main.DrawToMap_Section -= DrawToMap_Section;
+            On.Terraria.GameContent.UI.States.UIWorldLoad.DrawSelf -= DrawSelfLoad;
+            DimLibsHook.do_worldGenCallBack_Hook -= do_worldGenCallBack;
         }
 
         public static Object Clone(Object self)
         {
             return typeof(Object).GetMethod("MemberwiseClone", BindingFlags.NonPublic | BindingFlags.Instance)
                 .Invoke(self, new object[] { });
+        }
+
+        public static void DrawSelfLoad(On.Terraria.GameContent.UI.States.UIWorldLoad.orig_DrawSelf orig,
+            UIWorldLoad instance, SpriteBatch sb)
+        {
+            Viewport dimension = Main.graphics.GraphicsDevice.Viewport;
+            Texture2D texture = Dimlibs.Instance.GetTexture("Texture/LoadingScreen3");
+            for (int i = 0; i < dimension.Width; i += texture.Width)
+            {
+                for (int j = 0; j < dimension.Height; j += texture.Height)
+                {
+                    sb.Draw(texture, new Rectangle(i, j, texture.Width, texture.Height), null, Color.White, 0f,
+                        Vector2.Zero, SpriteEffects.None, 0f);
+                }
+            }
+            orig.Invoke(instance, sb);
         }
 
         public static void DrawToMap_Section(On.Terraria.Main.orig_DrawToMap_Section org, Main instance, int secX, int secY)

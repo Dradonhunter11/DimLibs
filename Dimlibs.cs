@@ -1,15 +1,15 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Reflection;
-using System.Runtime.Remoting.Messaging;
 using Dimlibs.API;
 using Dimlibs.Chunks;
 using log4net;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using MonoMod.RuntimeDetour.HookGen;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Text;
 using Terraria;
 using Terraria.ModLoader;
 
@@ -17,7 +17,7 @@ namespace Dimlibs
 {
     public class Dimlibs : Mod
     {
-        private string previousWorldPath;
+        private readonly string previousWorldPath;
         internal static IList<ModCommand> commandsList = new List<ModCommand>();
         internal static Dimlibs Instance;
 
@@ -41,6 +41,10 @@ namespace Dimlibs
                 Autoload(mod);
             });
             //MassPatcher.StartPatching();
+
+            ILog log = LogManager.GetLogger("HookGenerator");
+            log.Info("==============================\n" + GenHook.ConvertToHook(typeof(DimensionHandler)));
+            
         }
 
         public override void Unload()
@@ -51,6 +55,7 @@ namespace Dimlibs
         public override void PostSetupContent()
         {
             LoadModContent(Autoload);
+
         }
 
         public override void HandlePacket(BinaryReader reader, int whoAmI)
@@ -73,7 +78,9 @@ namespace Dimlibs
         {
 
             if (mod.Code == null)
+            {
                 return;
+            }
 
             foreach (Type type in mod.Code.GetTypes().OrderBy(type => type.FullName, StringComparer.InvariantCulture))
             {
@@ -85,7 +92,7 @@ namespace Dimlibs
                 {
                     AutoloadDimension(type);
                 }
-                
+
             }
         }
 
@@ -109,7 +116,7 @@ namespace Dimlibs
         {
             FieldInfo commandListInfo =
                 typeof(CommandManager).GetField("Commands", BindingFlags.Static | BindingFlags.NonPublic);
-            Dictionary<String, List<ModCommand>> tempDictionary = (Dictionary<string, List<ModCommand>>) commandListInfo.GetValue(null);
+            Dictionary<String, List<ModCommand>> tempDictionary = (Dictionary<string, List<ModCommand>>)commandListInfo.GetValue(null);
             Dictionary<string, List<ModCommand>>.ValueCollection a = tempDictionary.Values;
             foreach (var modCommandList in a)
             {
@@ -125,7 +132,7 @@ namespace Dimlibs
 
         private void AutoloadDimension(Type type)
         {
-            DimGenerator dimension = (DimGenerator) Activator.CreateInstance(type);
+            DimGenerator dimension = (DimGenerator)Activator.CreateInstance(type);
             DimWorld.dimensionInstanceHandlers[dimension.dimensionName] = dimension.handler;
             ILog logger = LogManager.GetLogger("Kaboom");
             foreach (string str in DimWorld.dimensionInstanceHandlers.Keys)
@@ -185,7 +192,7 @@ namespace Dimlibs
                         catch (Exception e)
                         {
                             //log.Error(e.Message, e);
-                        }                      
+                        }
                     }
                 }
             }
@@ -240,7 +247,109 @@ namespace Dimlibs
                 PropertyInfo subProgressText = typeof(Main).Assembly.GetType("Terraria.ModLoader.UI.UILoadMods")
                     .GetProperty("SubProgressText", BindingFlags.Public | BindingFlags.Instance);
                 MethodInfo setProgressText = subProgressText.GetSetMethod();
-                setProgressText.Invoke(uiModLoadInstance, new object[] {statusText});
+                setProgressText.Invoke(uiModLoadInstance, new object[] { statusText });
+            }
+        }
+
+        internal static class GenHook
+        {
+
+            public static string ConvertToHook(Type type)
+            {
+                StringBuilder builder = new StringBuilder();
+
+                foreach (var methodInfo in type.GetMethods())
+                {
+                    string hook;
+                    builder.AppendLine(GenerateOrigDelegate(methodInfo, type));
+                    builder.AppendLine(GenerateHookDelegate(methodInfo, type, out hook));
+                    builder.AppendLine();
+                    builder.AppendLine(GenerateEvent(hook, type, methodInfo));
+                    builder.AppendLine();
+                }
+                return builder.ToString();
+            }
+
+            public static string GenerateHookDelegate(MethodInfo method, Type type, out string hook)
+            {
+                string str = "public delegate " + ((method.ReturnType.Name == "Void") ? "void" : method.ReturnType.Name) + " hook_" + method.Name + "(orig_" + method.Name + " orig";
+
+                hook = "hook_" + method.Name;
+
+                if (!method.IsStatic)
+                {
+                    str += ", " + type.Name + " self";
+                }
+
+                if (method.GetParameters().Length != 0)
+                {
+                    str += ", ";
+                }
+
+                for (int i = 0; i < method.GetParameters().Length; i++)
+                {
+
+                    str += method.GetParameters()[i].ParameterType.Name + " " + method.GetParameters()[i].Name;
+                    if (i < method.GetParameters().Length - 1)
+                    {
+                        str += ", ";
+                    }
+                }
+
+
+                str += ");";
+
+                return str;
+            }
+
+            public static string GenerateOrigDelegate(MethodInfo method, Type type)
+            {
+                string str = "public delegate " + ((method.ReturnType.Name == "Void") ? "void" : method.ReturnType.Name) + " orig_" + method.Name + "(";
+
+                if (!method.IsStatic)
+                {
+                    str += type.Name + " self";
+                }
+
+                if (method.GetParameters().Length != 0)
+                {
+                    str += ", ";
+                }
+
+                for (int i = 0; i < method.GetParameters().Length; i++)
+                {
+
+                    str += method.GetParameters()[i].ParameterType.Name + " " + method.GetParameters()[i].Name;
+                    if (i < method.GetParameters().Length - 1)
+                    {
+                        str += ", ";
+                    }
+                }
+
+                str.Replace("Void", "void");
+
+                str += ");";
+
+                return str;
+            }
+
+            public static string GenerateEvent(string hook, Type type, MethodInfo method)
+            {
+                StringBuilder str = new StringBuilder("public static event " + hook + " " + hook.Replace("hook_", "") + "_hook");
+                str.AppendLine();
+                str.AppendLine("{");
+                str.AppendLine("    add");
+                str.AppendLine("    {");
+                str.AppendLine($"      HookEndpointManager.Add(typeof({type.Name}).GetMethod(\"{method.Name}\"), value);");
+                str.AppendLine("    }");
+                str.AppendLine("    remove");
+                str.AppendLine("    {");
+                str.AppendLine(
+                    $"       HookEndpointManager.Remove(typeof({type.Name}).GetMethod(\"{method.Name}\"), value);");
+                str.AppendLine("    }");
+                str.AppendLine("}");
+
+                return str.ToString();
             }
         }
     }
