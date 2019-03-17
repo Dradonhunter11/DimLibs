@@ -95,6 +95,9 @@ namespace Dimlibs.API
                         Vector2.Zero, SpriteEffects.None, 0f);
                 }
             }
+            Texture2D logo = Dimlibs.Instance.GetTexture("Texture/TerrariaLogo");
+            Vector2 TerrariaLogo = new Vector2(Main.screenWidth / 2 - logo.Width / 2, 40);
+            sb.Draw(logo, TerrariaLogo, Color.White);
             orig.Invoke(instance, sb);
         }
 
@@ -275,11 +278,11 @@ namespace Dimlibs.API
         public static void do_worldGenCallBack(DimLibsHook.orig_do_worldGenCallBack orig, object threadContext)
         {
             Main.PlaySound(10, -1, -1, 1, 1f, 0f);
-            foreach (DimensionHandler handler in DimWorld.dimensionInstanceHandlers.Values)
+            foreach (ModDimension handler in Dimlibs.dimensionInstanceHandlers.Values)
             {
                 WorldGen.clearWorld();
-                handler.generator.GenerateDimension(Main.ActiveWorldFileData.Seed, threadContext as GenerationProgress);
-                handler.Save();
+                handler.GenerateDimension(Main.ActiveWorldFileData.Seed, threadContext as GenerationProgress);
+                handler.handler.Save();
             }
             WorldFile.saveWorld(Main.ActiveWorldFileData.IsCloudSave, true);
             if (Main.menuMode == 10 || Main.menuMode == 888)
@@ -484,13 +487,28 @@ namespace Dimlibs.API
         public static void SaveWorld(On.Terraria.IO.WorldFile.orig_saveWorld_bool_bool orig, bool useCloudSaving, bool resetTime = false)
         {
             orig.Invoke(useCloudSaving, resetTime);
-            DimWorld.dimensionInstanceHandlers[DimWorld.dimension].Save();
+            if (DimWorld.dimension == "OverworldDimension")
+            {
+                Dimlibs.Instance.GetDimension("OverworldDimension").handler.Save();
+            }
+            else
+            {
+                Dimlibs.dimensionInstanceHandlers[DimWorld.dimension].handler.Save();
+            }
         }
 
         public static void LoadWorld(On.Terraria.IO.WorldFile.orig_loadWorld orig, bool loadFromCloud)
         {
             orig.Invoke(loadFromCloud);
-            DimWorld.dimensionInstanceHandlers[DimWorld.dimension].LoadWorld();
+            if (DimWorld.dimension == "OverworldDimension" || DimWorld.dimension == "Overworld")
+            {
+                Dimlibs.Instance.GetDimension("OverworldDimension").handler.LoadWorld();
+            }
+            else
+            {
+                Dimlibs.dimensionInstanceHandlers[DimWorld.dimension].handler.LoadWorld();
+                //Dimlibs.Instance.GetDimension("OverworldDimension").handler.LoadWorld();
+            }
         }
     }
 }

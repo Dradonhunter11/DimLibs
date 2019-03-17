@@ -24,8 +24,9 @@ namespace Dimlibs.UI
         protected override void DrawSelf(SpriteBatch spriteBatch)
         {
             Viewport dimension = Main.graphics.GraphicsDevice.Viewport;
-            Texture2D texture = Dimlibs.Instance.GetTexture("Texture/LoadingScreen2");
-            if (!currentHandler.generator.DrawCustomBackground(spriteBatch))
+            Texture2D texture = Dimlibs.Instance.GetTexture("Texture/LoadingScreen3");
+            Texture2D logo = Dimlibs.Instance.GetTexture("Texture/TerrariaLogo");
+            //if (!currentHandler.generator.DrawCustomBackground(spriteBatch))
             {
                 for (int i = 0; i < dimension.Width; i += texture.Width)
                 {
@@ -40,6 +41,7 @@ namespace Dimlibs.UI
                                    Main.fontDeathText.MeasureString(Main.statusText) / 2;
                 Utils.DrawBorderStringFourWay(spriteBatch, Main.fontDeathText, Main.statusText, position.X, position.Y,
                     Color.White, Color.Black, Vector2.Zero, 0.75f);
+                Vector2 logoDrawingPosition = new Vector2();
             }
         }
     }

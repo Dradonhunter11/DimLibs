@@ -13,7 +13,7 @@ namespace Dimlibs.Commands
         public override void Action(CommandCaller caller, string input, string[] args)
         {
             Main.NewText("=== Current active dimension === ");
-            foreach (var dimKey in DimWorld.dimensionInstanceHandlers.Keys)
+            foreach (var dimKey in Dimlibs.dimensionInstanceHandlers.Keys)
             {
                 Console.WriteLine("- " + dimKey);
             }

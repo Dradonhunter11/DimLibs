@@ -18,7 +18,7 @@ namespace Dimlibs.API
     {
         public string dimensionName { get; set; }
         public string dimensionMessage { get; set; }
-        internal DimGenerator generator;
+        internal ModDimension generator;
         public int itemUseCooldown = 0;
         public override bool Autoload(ref string name)
         {
@@ -34,7 +34,7 @@ namespace Dimlibs.API
             item.maxStack = 1;
         }
 
-        public void setDimensionGenerator(DimGenerator generator)
+        public void setDimensionGenerator(ModDimension generator)
         {
             this.generator = generator;
         }
@@ -95,7 +95,6 @@ namespace Dimlibs.API
 
         private async void startGen()
         {
-            generator.isGenerating = true;
             await generateDimension();
         }
 

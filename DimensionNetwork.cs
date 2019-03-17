@@ -26,8 +26,8 @@ namespace Dimlibs
 
             if (Main.netMode != 1)
             {
-                DimWorld.dimensionInstanceHandlers[p.previousServerDimension].Save();
-                DimWorld.dimensionInstanceHandlers[dimension].LoadWorld();
+                //Dimlibs.dimensionInstanceHandlers[p.previousServerDimension].Save();
+                //Dimlibs.dimensionInstanceHandlers[dimension].LoadWorld();
                 DimWorld.dimension = dimension;
                 Netplay.Clients[p.player.whoAmI].ResetSections();
                 CheckSection(0, p.player.position);
@@ -93,10 +93,10 @@ namespace Dimlibs
 
         public static void ClientSendRequest(String dimension)
         {
-            if (!DimWorld.dimensionInstanceHandlers.ContainsKey(dimension))
+            /*if (!DimWorld.dimensionInstanceHandlers.ContainsKey(dimension))
             {
                 return;
-            }
+            }*/
 
             ModPacket packet = Dimlibs.Instance.GetPacket();
             packet.Write((byte)DimensionRequestID.ClientRequest);

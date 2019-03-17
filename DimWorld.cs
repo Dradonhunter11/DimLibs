@@ -19,18 +19,11 @@ namespace Dimlibs
     internal class DimWorld : ModWorld
     {
         public static String previousDimension = "";
-        public static String dimension = "Overworld";
-        internal static readonly IDictionary<String, DimensionHandler> dimensionInstanceHandlers = new Dictionary<String, DimensionHandler>();
+        public static String dimension = "OverworldDimension";
+        
         private DimensionHandler currentRunningHandler;
 
         internal static bool update = false;
-
-        public DimensionHandler GetDimensionHandler(String dimensionName)
-        {
-            return (dimensionInstanceHandlers.ContainsKey(dimensionName))
-                ? dimensionInstanceHandlers[dimensionName]
-                : null;
-        }
 
         public override TagCompound Save()
         {
@@ -61,55 +54,6 @@ namespace Dimlibs
             {
                 update = true;
             }
-        }
-
-
-        internal static void AddDimension(DimensionHandler handler)
-        {
-            if (!dimensionInstanceHandlers.ContainsKey(handler.DimensionName))
-            {
-                dimensionInstanceHandlers.Add(handler.DimensionName, handler);
-            }
-        }
-
-        
-
-        public override void PreUpdate()
-        {
-            if (previousDimension != dimension && previousDimension != "" && Main.netMode == 0)
-            {
-                
-                dimensionInstanceHandlers[previousDimension].Save();
-                dimensionInstanceHandlers[dimension].LoadWorld();
-                WorldGen.EveryTileFrame();
-                NetMessage.SendData(MessageID.RequestTileData);
-            }
-            if (Main.netMode == 1)
-            {
-                DimPlayer p = Main.LocalPlayer.GetModPlayer<DimPlayer>();
-                Netplay.Clients[p.player.whoAmI].ResetSections();
-                CheckSection(0, p.player.position);
-                NetMessage.SendData(MessageID.RequestTileData);
-                Console.WriteLine("Hi, I finished loading!");
-            }
-
-            if (Main.netMode == 2)
-            {
-                DimPlayer p = Main.player[Main.LocalPlayer.whoAmI].GetModPlayer<DimPlayer>();
-                if (update)
-                {
-                    dimensionInstanceHandlers[p.previousServerDimension].Save();
-                    dimensionInstanceHandlers[p.serverCurrentDimension].LoadWorld();
-                    WorldGen.EveryTileFrame();
-                    dimension = p.serverCurrentDimension;
-                    p.previousServerDimension = p.serverCurrentDimension;
-                    NetMessage.SendData(MessageID.RequestTileData);
-                    Console.WriteLine(dimensionInstanceHandlers[p.serverCurrentDimension].DimensionName + " loaded");
-                    update = false;
-                }
-            }
-
-            previousDimension = dimension;
         }
 
         public static void CheckSection(int playerIndex, Vector2 position)

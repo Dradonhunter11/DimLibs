@@ -38,11 +38,12 @@
   <ItemGroup>
     <Compile Include="API\DimensionHandler.cs" />
     <Compile Include="API\DimensionHelper.cs" />
-    <Compile Include="API\DimGenerator.cs" />
+    <Compile Include="API\ModDimension.cs" />
     <Compile Include="API\DimItem.cs" />
     <Compile Include="API\DimLibsHook.cs" />
     <Compile Include="API\DimTile.cs" />
-    <Compile Include="API\OverworldHandler.cs" />
+    <Compile Include="API\ModExtension.cs" />
+    <Compile Include="API\OverworldDimension.cs" />
     <Compile Include="API\ReflectionUtil.cs" />
     <Compile Include="API\TileEntity\TEDimTile.cs" />
     <Compile Include="Chunks\ArrayChunk.cs" />

@@ -13,7 +13,7 @@ namespace Dimlibs.Commands
         public override void Action(CommandCaller caller, string input, string[] args)
         {
             
-            if (DimWorld.dimensionInstanceHandlers.ContainsKey(args[0]))
+            if (Dimlibs.dimensionInstanceHandlers.ContainsKey(args[0]))
             {
                 if (Main.netMode == 1)
                 {
@@ -31,7 +31,7 @@ namespace Dimlibs.Commands
                 if (Main.netMode == 0)
                 {
                     DimWorld.dimension = args[0];
-                    DimWorld.dimensionInstanceHandlers[args[0]].LoadWorld();
+                    Dimlibs.dimensionInstanceHandlers[args[0]].handler.LoadWorld();
                 }
 
             }

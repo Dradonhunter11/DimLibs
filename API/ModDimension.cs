@@ -15,11 +15,17 @@ using Terraria.World.Generation;
 
 namespace Dimlibs.API
 {
-    public abstract class DimGenerator
+    public abstract class ModDimension
     {
-        internal bool isGenerating = false;
+
         internal string dimensionName;
         internal DimensionHandler handler;
+
+        public Mod mod
+        {
+            get;
+            internal set;
+        }
 
         protected int copper;
         protected int iron;
@@ -43,42 +49,26 @@ namespace Dimlibs.API
         protected double rockLayerLow;
         protected double rockLayerHigh;
 
-        protected int _DimensionMaxTileX = 2400;
-        protected int _DimensionMaxTileY = 1200;
+        public int dimensionMaxTileX;
+        public int dimensionMaxTileY;
 
 
         public abstract void ModifyGenerationPass(int seed, GenerationProgress customProgressObject);
 
-        public List<GenPass> GetPasses(WorldGenerator generator)
-        {
-            FieldInfo info = typeof(WorldGenerator).GetField("_passes", BindingFlags.Instance | BindingFlags.NonPublic);
-            return (List<GenPass>)info.GetValue(generator);
-        }
+        public List<GenPass> GetPasses(WorldGenerator generator) => (List<GenPass>) typeof(WorldGenerator)
+            .GetField("_passes", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(generator);
 
-        public float GetTotalLoadWeight(WorldGenerator generator)
-        {
-            FieldInfo info = typeof(WorldGenerator).GetField("_totalLoadWeight", BindingFlags.Instance | BindingFlags.NonPublic);
-            return (float)info.GetValue(generator);
-        }
+        public float GetTotalLoadWeight(WorldGenerator generator) => (float)typeof(WorldGenerator)
+            .GetField("_totalLoadWeight", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(generator);
 
-        public void SetTotalLoadWeight(WorldGenerator generator, float weight)
-        {
-            FieldInfo info = typeof(WorldGenerator).GetField("_totalLoadWeight", BindingFlags.Instance | BindingFlags.NonPublic);
-            info.SetValue(generator, weight);
-        }
+
+        public void SetTotalLoadWeight(WorldGenerator generator, float weight) => typeof(WorldGenerator)
+            .GetField("_totalLoadWeight", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(generator, weight);
 
         public WorldGenerator _generator
         {
-            get
-            {
-                FieldInfo info = typeof(WorldGen).GetField("_generator", BindingFlags.NonPublic | BindingFlags.Static);
-                return (WorldGenerator)info.GetValue(null);
-            }
-            set
-            {
-                FieldInfo info = typeof(WorldGen).GetField("_generator", BindingFlags.NonPublic | BindingFlags.Static);
-                info.SetValue(null, value);
-            }
+            get => (WorldGenerator)typeof(WorldGen).GetField("_generator", BindingFlags.NonPublic | BindingFlags.Static).GetValue(null);
+            set => typeof(WorldGen).GetField("_generator", BindingFlags.NonPublic | BindingFlags.Static).SetValue(null, value);
         }
 
         protected void AddGenerationPass(string name, WorldGenLegacyMethod method)
@@ -96,13 +86,21 @@ namespace Dimlibs.API
             reset(seed);
             ModifyGenerationPass(seed, customProgressObject);
             final(customProgressObject);
-            finish();
+            PostGeneration();
         }
-
-        
 
         public void reset(int seed)
         {
+            if (dimensionMaxTileX > 500)
+            {
+                Main.maxTilesX = dimensionMaxTileX;
+            }
+
+            if (dimensionMaxTileY > 500)
+            {
+                Main.maxTilesY = dimensionMaxTileY;
+            }
+
             
             WorldGen._lastSeed = seed;
             _generator = new WorldGenerator(seed);
@@ -130,22 +128,20 @@ namespace Dimlibs.API
             worldSurfaceHigh = 0.0;
             rockLayerLow = 0.0;
             rockLayerHigh = 0.0;
-
-            WorldHooks.PreWorldGen();
         }
 
-        public void finish()
+        public virtual void PostGeneration()
         {
-            isGenerating = false;
+
         }
 
         private void final(GenerationProgress customProgressObject)
         {
             float weight = GetTotalLoadWeight(_generator);
-            //WorldHooks.ModifyWorldGenTasks(GetPasses(_generator), ref weight);
             SetTotalLoadWeight(_generator, weight);
             Main.menuMode = 888;
-            gen(customProgressObject);
+            if(this.GetType().Name != "OverworldDimension") //To avoid generation of the overworld twice
+                gen(customProgressObject);
             Main.WorldFileMetadata = FileMetadata.FromCurrentSettings(FileType.World);
         }
 
@@ -157,7 +153,6 @@ namespace Dimlibs.API
         async Task g(GenerationProgress customProgressObject)
         {
             _generator.GenerateWorld(customProgressObject);
-            //WorldHooks.PostWorldGen();
         }
 
         /// <summary>
@@ -171,10 +166,23 @@ namespace Dimlibs.API
             return false;
         }
 
-        public DimGenerator(String dimensionName)
+        /// <summary>
+        /// Set the world size there I guess?
+        /// </summary>
+        public virtual void SetDefault()
         {
-            handler = new DimensionHandler(this, dimensionName);
-            this.dimensionName = dimensionName;
+            dimensionMaxTileX = Main.maxTilesX;
+            dimensionMaxTileY = Main.maxTilesY;
+        }
+
+        public DimensionHandler GetHandler()
+        {
+            return handler;
+        }
+
+        public ModDimension()
+        {
+            handler = new DimensionHandler(this.GetType().Name);
         }
     }
 }

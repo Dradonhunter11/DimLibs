@@ -25,15 +25,10 @@ namespace Dimlibs.API
 {
     public sealed class DimensionHandler
     {
-        private Tile[,] dimensionTile;
-        private readonly Projectile[] instanceProjectileArray;
-        private Chest[] chest;
-        private readonly WorldMap map;
-        private readonly String _Path = "";
-        internal DimGenerator generator;
-        private String dimensionName;
-        private int dimensionID;
+        public static bool FreezeWorldUpdate = false;
 
+        private Chest[] _chest;
+        private readonly String _Path = "";
         private readonly int maxTileX;
         private readonly int maxTileY;
         private readonly int spawnX;
@@ -44,40 +39,25 @@ namespace Dimlibs.API
         private readonly float leftWorld;
         private readonly float rightWorld;
 
+        public String ActiveDimensionName { get; private set; }
 
-        public int DimensionID
+        public DimensionHandler(String name)
         {
-            get { return dimensionID; }
-            internal set { dimensionID = value; }
-        }
-
-        public String DimensionName
-        {
-            get { return dimensionName; }
-            private set { dimensionName = value; }
-        }
-
-        public DimensionHandler(DimGenerator generator, String name)
-        {
-            this.generator = generator;
-            DimensionName = name;
-
-            DimWorld.AddDimension(this);
+            ActiveDimensionName = name;
         }
 
         internal void setOverworldStats()
         {
-            dimensionTile = Main.tile;
-            chest = Main.chest;
+            _chest = Main.chest;
         }
 
 
         public void Save()
         {
-            if (!Directory.Exists(Path.Combine(Main.ActiveWorldFileData.Path.Replace(".wld", ""), dimensionName)))
+            if (!Directory.Exists(Path.Combine(Main.ActiveWorldFileData.Path.Replace(".wld", ""), ActiveDimensionName)))
             {
                 Directory.CreateDirectory(
-                    Path.Combine(Main.ActiveWorldFileData.Path.Replace(".wld", ""), dimensionName));
+                    Path.Combine(Main.ActiveWorldFileData.Path.Replace(".wld", ""), ActiveDimensionName));
             }
             SaveFileFormatHeader();
             SaveFileHeader();
@@ -89,7 +69,7 @@ namespace Dimlibs.API
 
         private void SaveFileFormatHeader()
         {
-            string headerPath = Path.Combine(Main.ActiveWorldFileData.Path.Replace(".wld", ""), dimensionName) + "/TrueHeader.data";
+            string headerPath = Path.Combine(Main.ActiveWorldFileData.Path.Replace(".wld", ""), ActiveDimensionName) + "/TrueHeader.data";
             if (File.Exists(headerPath))
             {
                 File.Delete(headerPath);
@@ -135,7 +115,7 @@ namespace Dimlibs.API
 
         private void SaveFileHeader()
         {
-            string headerPath = Path.Combine(Main.ActiveWorldFileData.Path.Replace(".wld", ""), dimensionName) + "/header.data";
+            string headerPath = Path.Combine(Main.ActiveWorldFileData.Path.Replace(".wld", ""), ActiveDimensionName) + "/header.data";
             if (File.Exists(headerPath))
             {
                 File.Delete(headerPath);
@@ -161,7 +141,7 @@ namespace Dimlibs.API
 
         private void SaveCurrentEntity()
         {
-            string path = Path.Combine(Main.ActiveWorldFileData.Path.Replace(".wld", ""), dimensionName) + "/NPC.data";
+            string path = Path.Combine(Main.ActiveWorldFileData.Path.Replace(".wld", ""), ActiveDimensionName) + "/NPC.data";
             if (File.Exists(path))
             {
                 File.Delete(path);
@@ -220,7 +200,7 @@ namespace Dimlibs.API
 
         private void SaveCurrentTile()
         {
-            string path = Path.Combine(Main.ActiveWorldFileData.Path.Replace(".wld", ""), dimensionName) + "/Tile.data";
+            string path = Path.Combine(Main.ActiveWorldFileData.Path.Replace(".wld", ""), ActiveDimensionName) + "/Tile.data";
             if (File.Exists(path))
             {
                 File.Delete(path);
@@ -437,7 +417,7 @@ namespace Dimlibs.API
 
         private void SaveModdedStuff()
         {
-            string path = Path.Combine(Main.ActiveWorldFileData.Path.Replace(".wld", ""), dimensionName) + "/modded.data";
+            string path = Path.Combine(Main.ActiveWorldFileData.Path.Replace(".wld", ""), ActiveDimensionName) + "/modded.data";
 
             if (File.Exists(path))
             {
@@ -465,7 +445,7 @@ namespace Dimlibs.API
 
         public void SaveChest()
         {
-            string headerPath = Path.Combine(Main.ActiveWorldFileData.Path.Replace(".wld", ""), dimensionName) + "/chest.data";
+            string headerPath = Path.Combine(Main.ActiveWorldFileData.Path.Replace(".wld", ""), ActiveDimensionName) + "/chest.data";
 
             if (File.Exists(headerPath))
             {
@@ -946,7 +926,7 @@ namespace Dimlibs.API
 
         public void LoadHeader()
         {
-            string headerPath = Path.Combine(Main.ActiveWorldFileData.Path.Replace(".wld", ""), dimensionName) + "/header.data";
+            string headerPath = Path.Combine(Main.ActiveWorldFileData.Path.Replace(".wld", ""), ActiveDimensionName) + "/header.data";
 
             using (BinaryReader headerReader = new BinaryReader(File.OpenRead(headerPath)))
             {
@@ -966,7 +946,7 @@ namespace Dimlibs.API
 
         public void LoadNPC()
         {
-            string path = Path.Combine(Main.ActiveWorldFileData.Path.Replace(".wld", ""), dimensionName) + "/NPC.data";
+            string path = Path.Combine(Main.ActiveWorldFileData.Path.Replace(".wld", ""), ActiveDimensionName) + "/NPC.data";
 
             if (!File.Exists(path))
             {
@@ -1008,7 +988,7 @@ namespace Dimlibs.API
 
         public void LoadTile(bool[] importance)
         {
-            string path = Path.Combine(Main.ActiveWorldFileData.Path.Replace(".wld", ""), dimensionName) + "/Tile.data";
+            string path = Path.Combine(Main.ActiveWorldFileData.Path.Replace(".wld", ""), ActiveDimensionName) + "/Tile.data";
 
             Main.tile = new Tile[Main.maxTilesX, Main.maxTilesY];
 
@@ -1200,7 +1180,7 @@ namespace Dimlibs.API
 
         public void LoadChests()
         {
-            string path = Path.Combine(Main.ActiveWorldFileData.Path.Replace(".wld", ""), dimensionName) + "/chest.data";
+            string path = Path.Combine(Main.ActiveWorldFileData.Path.Replace(".wld", ""), ActiveDimensionName) + "/chest.data";
             using (BinaryReader reader = new BinaryReader(File.Open(path, FileMode.Open)))
             {
                 int num = (int)reader.ReadInt16();
@@ -1283,7 +1263,7 @@ namespace Dimlibs.API
 
         internal void LoadModdedStuff()
         {
-            string path = Path.Combine(Main.ActiveWorldFileData.Path.Replace(".wld", ""), dimensionName) + "/modded.data";
+            string path = Path.Combine(Main.ActiveWorldFileData.Path.Replace(".wld", ""), ActiveDimensionName) + "/modded.data";
 
             using (BinaryReader reader = new BinaryReader(File.Open(path, FileMode.Open)))
             {
@@ -1299,7 +1279,7 @@ namespace Dimlibs.API
 
         private void LoadFileFormatTrueHeader(out bool[] importance, out int[] positions)
         {
-            string path = Path.Combine(Main.ActiveWorldFileData.Path.Replace(".wld", ""), dimensionName) + "/Trueheader.data";
+            string path = Path.Combine(Main.ActiveWorldFileData.Path.Replace(".wld", ""), ActiveDimensionName) + "/Trueheader.data";
             using (BinaryReader reader = new BinaryReader(File.Open(path, FileMode.Open)))
             {
                 importance = null;
@@ -1352,12 +1332,10 @@ namespace Dimlibs.API
 
         public void LoadWorld()
         {
-
             Main.gameMenu = true;
             Main.menuMode = 888;
             Main.MenuUI.SetState(new UIDimensionLoading(this));
             ThreadPool.QueueUserWorkItem(do_LoadDimensionCallBack);
-            
         }
 
         public void do_LoadDimensionCallBack(object ThreadContext)

@@ -20,6 +20,7 @@ namespace Dimlibs
         private readonly string previousWorldPath;
         internal static IList<ModCommand> commandsList = new List<ModCommand>();
         internal static Dimlibs Instance;
+        internal static readonly IDictionary<String, ModDimension> dimensionInstanceHandlers = new Dictionary<String, ModDimension>();
 
         public World tile = new World();
 
@@ -35,18 +36,22 @@ namespace Dimlibs
                 {
                     Autoload(mod);
                 }
-                catch { }
+                catch (Exception e)
+                {
+
+                }
             }
             //MassPatcher.StartPatching();
 
             ILog log = LogManager.GetLogger("HookGenerator");
             log.Info("==============================\n" + GenHook.ConvertToHook(typeof(DimensionHandler)));
-            
+            On.Terraria.WorldGen.UpdateWorld += WorldUpdate;
         }
 
         public override void Unload()
         {
             ReflectionUtil.Unload();
+            On.Terraria.WorldGen.UpdateWorld -= WorldUpdate;
         }
 
         public override void PostSetupContent()
@@ -88,21 +93,11 @@ namespace Dimlibs
 
             TypeInfo[] array = mod.Code.DefinedTypes.OrderBy(type => type.FullName)
                 .ToArray();
-            for (int i = 0; i < array.Length; i++)
+            foreach (Type type in mod.Code.GetTypes().OrderBy(type => type.FullName, StringComparer.InvariantCulture))
             {
-                Type type = array[i];
-
-                /*
-                 * if (type.IsAbstract || type.GetConstructor(new Type[0]) == null) //don't autoload things with no default constructor
-                 * {
-                 * continue;
-                 * }
-                 */
-
-                // if (typeof(DimGenerator).IsAssignableFrom(type))
-                if (type.IsSubclassOf(typeof(DimGenerator)))
+                if (type.IsSubclassOf(typeof(ModDimension)))
                 {
-                    AutoloadDimension(type);
+                    mod.AutoLoadDimension(type);
                 }
             }
         }
@@ -125,14 +120,11 @@ namespace Dimlibs
             }
         }
 
-        private void AutoloadDimension(Type type)
+        public static void WorldUpdate(On.Terraria.WorldGen.orig_UpdateWorld orig)
         {
-            DimGenerator dimension = (DimGenerator)Activator.CreateInstance(type);
-            DimWorld.dimensionInstanceHandlers[dimension.dimensionName] = dimension.handler;
-            ILog logger = LogManager.GetLogger("Kaboom");
-            foreach (string str in DimWorld.dimensionInstanceHandlers.Keys)
+            if (!DimensionHandler.FreezeWorldUpdate)
             {
-                logger.Info(str);
+                orig.Invoke();
             }
         }
 
@@ -241,7 +233,7 @@ namespace Dimlibs
                 setProgressText.Invoke(uiModLoadInstance, new object[] { statusText });
             }
         }
-
+        
         internal static class GenHook
         {
 
