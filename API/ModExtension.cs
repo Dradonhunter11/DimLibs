@@ -20,8 +20,9 @@ namespace Dimlibs.API
         {
             ModDimension dimension = (ModDimension) Activator.CreateInstance(type);
             dimension.mod = self;
-            dimension.SetDefault();
-            Dimlibs.dimensionInstanceHandlers.Add(self.Name + ":" + dimension.GetType().Name, dimension);
+            dimension.Name = dimension.GetType().Name;
+			dimension.SetDefault();
+            Dimlibs.dimensionInstanceHandlers.Add(dimension.URN, dimension);
         }
     }
 }

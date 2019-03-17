@@ -45,13 +45,13 @@ namespace Dimlibs
 
             ILog log = LogManager.GetLogger("HookGenerator");
             log.Info("==============================\n" + GenHook.ConvertToHook(typeof(DimensionHandler)));
-            On.Terraria.WorldGen.UpdateWorld += WorldUpdate;
+            //On.Terraria.WorldGen.UpdateWorld += WorldUpdate;
         }
 
         public override void Unload()
         {
             ReflectionUtil.Unload();
-            On.Terraria.WorldGen.UpdateWorld -= WorldUpdate;
+            //On.Terraria.WorldGen.UpdateWorld -= WorldUpdate;
         }
 
         public override void PostSetupContent()
@@ -120,13 +120,13 @@ namespace Dimlibs
             }
         }
 
-        public static void WorldUpdate(On.Terraria.WorldGen.orig_UpdateWorld orig)
+        /*public static void WorldUpdate(On.Terraria.WorldGen.orig_UpdateWorld orig)
         {
             if (!DimensionHandler.FreezeWorldUpdate)
             {
                 orig.Invoke();
             }
-        }
+        }*/
 
         internal static class ILPatching
         {

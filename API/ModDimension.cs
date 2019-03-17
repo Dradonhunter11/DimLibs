@@ -15,11 +15,14 @@ using Terraria.World.Generation;
 
 namespace Dimlibs.API
 {
-    public abstract class ModDimension
-    {
+	public abstract class ModDimension
+	{
 
-        internal string dimensionName;
-        internal DimensionHandler handler;
+		public string Name;
+
+		public string URN => mod.Name + ":" + Name;
+
+		internal DimensionHandler handler;
 
         public Mod mod
         {
