@@ -87,7 +87,8 @@
     <Reference Include="Mono.Cecil">
       <HintPath>..\..\..\..\..\..\tml 64bit backup\tModLoader\src\tModLoader\bin\WindowsRelease\Mono.Cecil.dll</HintPath>
     </Reference>
-    <Reference Include="MonoMod.RuntimeDetour">
+    <Reference Include="MonoMod.RuntimeDetour, Version=18.10.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Terraria\MonoMod.RuntimeDetour.dll</HintPath>
     </Reference>
     <Reference Include="ReLogic, Version=1.0.0.0, Culture=neutral, processorArchitecture=x86">

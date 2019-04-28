@@ -1368,6 +1368,7 @@ namespace Dimlibs.API
             LoadChests();
             Main.statusText = "Loading modded data";
             LoadModdedStuff();
+            //Still need to do TileEntity
             Main.statusText = "done";
             WorldGen.EveryTileFrame();
             Main.LocalPlayer.Spawn();

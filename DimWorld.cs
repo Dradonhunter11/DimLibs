@@ -19,7 +19,7 @@ namespace Dimlibs
     internal class DimWorld : ModWorld
     {
         public static String previousDimension = "";
-        public static String dimension = "OverworldDimension";
+        public static String dimension = "Dimlibs:OverworldDimension";
         
         private DimensionHandler currentRunningHandler;
 
@@ -35,6 +35,10 @@ namespace Dimlibs
         public override void Load(TagCompound tag)
         {
             dimension = tag.GetString("currentDimension");
+            if (dimension == "Overworld")
+            {
+                dimension = "Dimlibs:OverworldDimension";
+            }
         }
 
         public override void NetSend(BinaryWriter writer)

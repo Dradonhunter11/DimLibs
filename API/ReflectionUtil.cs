@@ -488,28 +488,27 @@ namespace Dimlibs.API
         public static void SaveWorld(On.Terraria.IO.WorldFile.orig_saveWorld_bool_bool orig, bool useCloudSaving, bool resetTime = false)
         {
             orig.Invoke(useCloudSaving, resetTime);
-            /*if (DimWorld.dimension == "OverworldDimension")
+            try
             {
-                Dimlibs.Instance.GetDimension("OverworldDimension").handler.Save();
-            }
-            else
-            {*/
                 Dimlibs.dimensionInstanceHandlers[DimWorld.dimension].handler.Save();
-            //}
+            }
+            catch (Exception e)
+            {
+                Dimlibs.dimensionInstanceHandlers["Dimlibs:OverworldDimension"].handler.Save();
+            }
         }
 
         public static void LoadWorld(On.Terraria.IO.WorldFile.orig_loadWorld orig, bool loadFromCloud)
         {
             orig.Invoke(loadFromCloud);
-            /*if (DimWorld.dimension == "OverworldDimension" || DimWorld.dimension == "Overworld")
+            try
             {
-                Dimlibs.Instance.GetDimension("OverworldDimension").handler.LoadWorld();
-            }
-            else
-            {*/
                 Dimlibs.dimensionInstanceHandlers[DimWorld.dimension].handler.LoadWorld();
-                //Dimlibs.Instance.GetDimension("OverworldDimension").handler.LoadWorld();
-            //}
+            }
+            catch (Exception e)
+            {
+                Dimlibs.dimensionInstanceHandlers["Dimlibs:OverworldDimension"].handler.LoadWorld();
+            }
         }
     }
 }
