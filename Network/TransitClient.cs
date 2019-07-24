@@ -3,10 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Dimlibs.API;
 
-namespace Dimlibs.API.TileEntity
+namespace Dimlibs.Network
 {
-    class TEDimTile
+    internal class TransitClient : AbstractManager<TransitClient>
     {
+      
+
     }
 }

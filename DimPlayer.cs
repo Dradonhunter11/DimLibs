@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.Xna.Framework;
 using Terraria;
 using Terraria.ModLoader;
 using Terraria.ModLoader.IO;
+using Terraria.Net;
 
 namespace Dimlibs
 {
@@ -15,6 +12,12 @@ namespace Dimlibs
         internal static List<string> dimList = new List<string>();
         internal string serverCurrentDimension = "Overworld";
         internal string previousServerDimension = "Overworld";
+
+        internal RemoteAddress currentConnectedAdress;
+        internal string hostName;
+        internal int port;
+        internal bool inTransit = false;
+
 
         public String getServerDimension()
         {
@@ -42,7 +45,9 @@ namespace Dimlibs
         {
             if (Main.netMode == 1)
             {
-                DimensionNetwork.ClientSendRequest(serverCurrentDimension);
+                currentConnectedAdress = Netplay.Connection.Socket.GetRemoteAddress();
+                port = Netplay.ListenPort;
+                hostName = Netplay.GetLocalIPAddress();
             }
         }
     }

@@ -1,16 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
 using System.IO;
-using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
-using Dimlibs.API;
+using System.Threading;
+using Dimlibs.UI;
+using log4net;
 using Microsoft.Xna.Framework;
 using Terraria;
 using Terraria.ID;
-using Terraria.IO;
 using Terraria.Localization;
 using Terraria.ModLoader;
 
@@ -18,6 +13,8 @@ namespace Dimlibs
 {
     class DimensionNetwork
     {
+        public static bool loading = false;
+
         public static void PrepareServerMP(string dimension, DimPlayer p)
         {
             //Netplay.Clients[NetMessage.buffer[p.player.whoAmI].whoAmI].ResetSections();
@@ -85,25 +82,88 @@ namespace Dimlibs
             byte type = reader.ReadByte();
             switch ((DimensionRequestID)type)
             {
-                case DimensionRequestID.ClientRequest:
-                    ReceiveRequest(reader);
+                case DimensionRequestID.ClientKick:
+                    ClientKickExecute(reader.ReadString());
+                    break;
+                case DimensionRequestID.ClientReconnect:
+                    ServerSendResponse(reader.ReadInt32());
+                    break;
+                case DimensionRequestID.ClientMessage:
+                    Main.LocalPlayer.GetModPlayer<DimPlayer>().inTransit = true;
+                    UINetworkConnection.Message = reader.ReadString();
                     break;
             }
         }
 
-        public static void ClientSendRequest(String dimension)
+        public static void ClientKickRequest(string dimension)
         {
-            /*if (!DimWorld.dimensionInstanceHandlers.ContainsKey(dimension))
-            {
-                return;
-            }*/
-
+            LogManager.GetLogger("Client").Info("Kick request sent");
             ModPacket packet = Dimlibs.Instance.GetPacket();
-            packet.Write((byte)DimensionRequestID.ClientRequest);
+            packet.Write((byte)DimensionRequestID.ClientKick);
             packet.Write(dimension);
             packet.Send();
-            
         }
+
+        public static void ClientKickExecute(string dimension)
+        {
+            Dimlibs.Instance.NewServerSocket();
+            LogManager.GetLogger("Server").Info("Kick request received");
+            if (Main.netMode == 2)
+            {
+                foreach (RemoteClient p in Netplay.Clients)
+                {
+                    if (!p.IsActive)
+                    {
+                        continue;
+                    }
+                    ModPacket packet = Dimlibs.Instance.GetPacket();
+                    packet.Write((byte)DimensionRequestID.ClientMessage);
+                    packet.Write("Server is currently changing to " + dimension);
+                    packet.Send(p.Id);
+                    NetMessage.SendChatMessageToClient(NetworkText.FromLiteral("Someone requested a dimension change, redirecting to the loading screen."), Color.White, p.Id);
+                }
+                ThreadPool.QueueUserWorkItem(ThreadKick);
+            }
+            DimWorld.SwapDimension();
+        }
+
+        public static void ThreadKick(object context)
+        {
+            Thread.Sleep(1500);
+            foreach (RemoteClient p in Netplay.Clients)
+            {
+                if (!p.IsActive)
+                {
+                    continue;
+                }
+                p.PendingTermination = true;
+            }
+        }
+
+        
+
+        public static void ClientSendRequest()
+        {         
+            ModPacket packet = Dimlibs.Instance.GetPacket();
+            packet.Write((byte)DimensionRequestID.ClientReconnect);
+            packet.Write(Main.LocalPlayer.whoAmI);
+            packet.Send(255);
+        }
+
+        public static void ServerSendResponse(int player)
+        {
+            LogManager.GetLogger("Dimlibs instance").Info("Is dimlibs alive : " + Dimlibs.Instance != null);
+            ModPacket serverPacket = Dimlibs.Instance.GetPacket();
+            serverPacket.Write((byte)DimensionRequestID.ServerReconnect);
+            serverPacket.Write(Dimlibs.dimensionInstanceHandlers[DimWorld.dimension].handler.loading);
+            serverPacket.Send(player);
+            if (loading)
+            {
+                LogManager.GetLogger("Server").Info(Main.player[player] + " tried to connect but it's still loading");
+                Netplay.Clients[player].PendingTermination = true;
+            }
+        }
+
 
         public static void ReceiveRequest(BinaryReader reader)
         {

@@ -4,16 +4,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Serialization;
 using System.Security.Permissions;
-using System.Text;
 using Microsoft.Xna.Framework;
 
 namespace Dimlibs.Chunks
 {
-	/// <summary>
-	/// A 2-Dimensional List
-	/// </summary>
-	/// <typeparam name="T">The type to store in this list</typeparam>
-	public class List2D<T> : IEnumerable<KeyValuePair<Position2I, T>>, ISerializable
+    /// <summary>
+    /// A 2-Dimensional List
+    /// </summary>
+    /// <typeparam name="T">The type to store in this list</typeparam>
+    public class List2D<T> : IEnumerable<KeyValuePair<Position2I, T>>, ISerializable
 	{
 		/// <summary>
 		/// The inner dictionary, which contains all the values in this list

@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.IO;
 using Terraria.ModLoader;
 
 namespace Dimlibs.API
@@ -23,6 +20,23 @@ namespace Dimlibs.API
             dimension.Name = dimension.GetType().Name;
 			dimension.SetDefault();
             Dimlibs.dimensionInstanceHandlers.Add(dimension.URN, dimension);
+        }
+
+        internal static byte bit(this bool self)
+        {
+            return (byte)((self) ? 1 : 0);
+        }
+
+        public static byte[] ReadAllBytes(this Stream instream)
+        {
+            if (instream is MemoryStream)
+                return ((MemoryStream)instream).ToArray();
+
+            using (var memoryStream = new MemoryStream())
+            {
+                instream.CopyTo(memoryStream);
+                return memoryStream.ToArray();
+            }
         }
     }
 }

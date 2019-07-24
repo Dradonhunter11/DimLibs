@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.Design;
-using System.Linq;
+﻿using System.Collections.Generic;
 using System.Reflection;
-using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Xna.Framework.Graphics;
 using Terraria;
@@ -15,7 +11,7 @@ using Terraria.World.Generation;
 
 namespace Dimlibs.API
 {
-	public abstract class ModDimension
+    public abstract class ModDimension
 	{
 
 		public string Name;

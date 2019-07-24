@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Terraria;
+﻿using Terraria;
 using Terraria.ModLoader;
 
 namespace Dimlibs.Commands
@@ -12,12 +7,28 @@ namespace Dimlibs.Commands
     {
         public override void Action(CommandCaller caller, string input, string[] args)
         {
+
+            if (Dimlibs.dimensionInstanceHandlers.ContainsKey("Dimlibs:OverworldDimension"))
+            {
+                if (Main.netMode == 1)
+                {
+                    DimensionNetwork.ClientKickRequest("Dimlibs:OverworldDimension");
+                }
+
+                if (Main.netMode == 0)
+                {
+                    DimWorld.SwapDimension();
+                }
+            }
+            
+            
+            return;
             
             if (Dimlibs.dimensionInstanceHandlers.ContainsKey(args[0]))
             {
                 if (Main.netMode == 1)
                 {
-                    DimensionNetwork.ClientSendRequest(args[0]);
+                    DimensionNetwork.ClientKickRequest("Dimension");
                     return;
                 }
 
@@ -47,7 +58,7 @@ namespace Dimlibs.Commands
         }
 
         public override CommandType Type {
-            get { return CommandType.World; }
+            get { return CommandType.Chat; }
         }
     }
 }

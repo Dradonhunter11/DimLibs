@@ -1,15 +1,8 @@
 ﻿using System;
-using System.CodeDom;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Dimlibs.API;
-using Dimlibs.Commands;
 using Microsoft.Xna.Framework;
 using Terraria;
-using Terraria.ID;
 using Terraria.Localization;
 using Terraria.ModLoader;
 using Terraria.ModLoader.IO;
@@ -18,10 +11,9 @@ namespace Dimlibs
 {
     internal class DimWorld : ModWorld
     {
-        public static String previousDimension = "";
-        public static String dimension = "Dimlibs:OverworldDimension";
+        public static string previousDimension = "";
+        public static string dimension = "Dimlibs:OverworldDimension";
         
-        private DimensionHandler currentRunningHandler;
 
         internal static bool update = false;
 
@@ -58,6 +50,15 @@ namespace Dimlibs
             {
                 update = true;
             }
+        }
+
+        public static void SwapDimension(string dimension = "Dimlibs:OverworldDimension")
+        {
+            Main.updateRate = 0;
+            Dimlibs.dimensionInstanceHandlers[DimWorld.dimension].handler.Load();
+            DimWorld.dimension = "Dimlibs:OverworldDimension";
+            Dimlibs.dimensionInstanceHandlers["Dimlibs:OverworldDimension"].handler.Load();
+            Main.updateRate = 1;
         }
 
         public static void CheckSection(int playerIndex, Vector2 position)
@@ -110,12 +111,5 @@ namespace Dimlibs
         {
             base.PostUpdate();
         }
-    }
-
-    public enum MessageType : byte
-    {
-        PrepareDimensionSwapping,
-        TransferringEveryBlock,
-        TransferComplete
     }
 }

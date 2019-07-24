@@ -1,12 +1,9 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace Dimlibs.Chunks
 {
-	public class ArrayChunk<T> : IEnumerable
+    public class ArrayChunk<T> : IEnumerable
 	{
 		/// <summary>
 		/// Return a T depending on the vector position

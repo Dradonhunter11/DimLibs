@@ -1,6 +1,5 @@
 ﻿using log4net;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -16,10 +15,8 @@ using Terraria.ID;
 using Terraria.IO;
 using Terraria.Localization;
 using Terraria.Map;
-using Terraria.ModLoader;
 using Terraria.Social;
 using Terraria.Utilities;
-using ChatManager = Terraria.UI.Chat.ChatManager;
 
 namespace Dimlibs.API
 {
@@ -39,7 +36,9 @@ namespace Dimlibs.API
         private readonly float leftWorld;
         private readonly float rightWorld;
 
-        public String ActiveDimensionName { get; private set; }
+        public string ActiveDimensionName { get; private set; }
+
+        public bool loading = false;
 
         public DimensionHandler(String name)
         {
@@ -1332,9 +1331,12 @@ namespace Dimlibs.API
 
         public void LoadWorld()
         {
-            Main.gameMenu = true;
-            Main.menuMode = 888;
-            Main.MenuUI.SetState(new UIDimensionLoading(this));
+            if (Main.netMode == 0)
+            {
+                Main.gameMenu = true;
+                Main.menuMode = 888;
+                Main.MenuUI.SetState(new UIDimensionLoading(this));
+            }
             ThreadPool.QueueUserWorkItem(do_LoadDimensionCallBack);
         }
 
@@ -1356,22 +1358,33 @@ namespace Dimlibs.API
             bool[] importance = null;
             int[] position = null;
 
-            Main.statusText = "Loading save file header...";
+            loading = true;
+
+            ILog log = LogManager.GetLogger("logger");
+            Console.Write("Loading dimension...");
+            log.Info("Loading save file header...");
             LoadFileFormatTrueHeader(out importance, out position);
-            Main.statusText = "Loading world size data...";
+            log.Info("Loading world size data...");
             LoadHeader();
-            Main.statusText = "Attempting to load NPC data";
+            log.Info("Attempting to load NPC data");
             LoadNPC();
-            Main.statusText = "Loading the tile, really important";
+            log.Info("Loading the tile, really important");
             LoadTile(importance);
-            Main.statusText = "Loading chest data";
+            log.Info("Loading chest data");
             LoadChests();
-            Main.statusText = "Loading modded data";
+            log.Info("Loading modded data");
             LoadModdedStuff();
             //Still need to do TileEntity
-            Main.statusText = "done";
-            WorldGen.EveryTileFrame();
-            Main.LocalPlayer.Spawn();
+            log.Info("done");
+            
+            if (Main.netMode == 0)
+            {
+                WorldGen.EveryTileFrame();
+                Main.LocalPlayer.Spawn();
+            }
+            
+            Console.Write("Done");
+            loading = false;
         }
     }
 }

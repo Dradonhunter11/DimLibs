@@ -1,18 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.Serialization;
-using System.Text;
-using Dimlibs.Chunks;
 using Microsoft.Xna.Framework;
 using Terraria;
 
 namespace Dimlibs.Chunks
-{ 
+{
     /// <summary>
-	/// A chunk of tiles in the world
-	/// </summary>
-	[Serializable]
+    /// A chunk of tiles in the world
+    /// </summary>
+    [Serializable]
 	public class Chunk : ISerializable
 	{
 		/// <summary>

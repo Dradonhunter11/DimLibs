@@ -1,17 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.Serialization;
 using System.Security.Permissions;
-using System.Text;
 using Microsoft.Xna.Framework;
 
 namespace Dimlibs.Chunks
 {
-	/// <summary>
-	/// A class that holds an X and Y position
-	/// </summary>
-	[Serializable]
+    /// <summary>
+    /// A class that holds an X and Y position
+    /// </summary>
+    [Serializable]
 	public class Position2I : ISerializable
 	{
 		/// <summary>
