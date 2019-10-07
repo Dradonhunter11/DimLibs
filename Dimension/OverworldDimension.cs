@@ -1,7 +1,8 @@
-﻿using Terraria;
+﻿using Dimlibs.API;
+using Terraria;
 using Terraria.World.Generation;
 
-namespace Dimlibs.API
+namespace Dimlibs.Dimension
 {
     class OverworldDimension : ModDimension
     {

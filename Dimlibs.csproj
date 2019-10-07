@@ -15,6 +15,12 @@
     <Exec Command="&quot;$(tMLBuildServerPath)&quot; -build $(ProjectDir) -eac $(TargetPath) -define $(DefineConstants) -unsafe $(AllowUnsafeBlocks)" />
   </Target>
   <ItemGroup>
+    <Compile Remove="API\DimlibsHook\ProjectDimensionHook.Load.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="API\DimlibsHook\ProjectDimensionHook.Load.cs" />
+  </ItemGroup>
+  <ItemGroup>
     <Reference Include="WindowsBase" />
   </ItemGroup>
 </Project>

@@ -7,7 +7,7 @@ namespace Dimlibs.Commands
     {
         public override void Action(CommandCaller caller, string input, string[] args)
         {
-            Console.WriteLine("Current dimension: " + DimWorld.dimension);
+            Console.WriteLine("Current dimension: " + Dimlibs.dimension);
 
         }
 

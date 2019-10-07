@@ -1,4 +1,5 @@
 ﻿using Dimlibs.API;
+using Dimlibs.API.DimensionHandler;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Terraria;

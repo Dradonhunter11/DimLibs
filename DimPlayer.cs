@@ -23,7 +23,7 @@ namespace Dimlibs
         {
             if (Main.netMode == 0)
             {
-                return DimWorld.dimension;
+                return Dimlibs.dimension;
             }
 
             return serverCurrentDimension;

@@ -19,12 +19,8 @@ namespace Dimlibs.API
             dimension.mod = self;
             dimension.Name = dimension.GetType().Name;
 			dimension.SetDefault();
-            Dimlibs.dimensionInstanceHandlers.Add(dimension.URN, dimension);
-        }
-
-        internal static byte bit(this bool self)
-        {
-            return (byte)((self) ? 1 : 0);
+			if(!Dimlibs.dimensionInstanceHandlers.ContainsKey(dimension.URN))
+				Dimlibs.dimensionInstanceHandlers.Add(dimension.URN, dimension);
         }
 
         public static byte[] ReadAllBytes(this Stream instream)

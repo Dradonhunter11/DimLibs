@@ -10,8 +10,11 @@ using System.Linq;
 using System.Net.Sockets;
 using System.Reflection;
 using System.Threading;
+using Dimlibs.API.ReflectionUtils;
+using Dimlibs.Network;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using ReLogic.OS;
 using Terraria;
 using Terraria.Localization;
 using Terraria.ModLoader;
@@ -27,16 +30,38 @@ namespace Dimlibs
         internal static IList<ModCommand> commandsList = new List<ModCommand>();
         internal static Dimlibs Instance;
         internal static readonly IDictionary<String, ModDimension> dimensionInstanceHandlers = new Dictionary<String, ModDimension>();
+		internal static readonly List<DimensionServer> server = new List<DimensionServer>();
 
-        public World tile = new World();
-
-
+	    public static string dimension = "Dimlibs:OverworldDimension";
+	    public static bool isActive;
+	    public static bool isLan = true;
 
         public override void Load()
         {
-            Instance = this;
-            ReflectionUtil.Load();
-            GetDimLibsCommand();
+			/*if (!Environment.Is64BitProcess && Main.netMode != 2)
+	        {
+		        throw new Exception("Dimension library might or might not take a huge amount of RAM, it is recommended to download the 64bit version the game to run it\n" +
+		                            "The 64bit version got some special patch to allow multiple instance of static thing without having problem\n" +
+									"To download it, visit the 64bit discord https://discord.gg/DY8cx5T");
+	        }*/
+
+			if (Program.LaunchParameters.TryGetValue("-dimension", out string dim))
+	        {
+		        dimension = dim;
+	        }
+
+	        if (Main.netMode == 2)
+		        Console.Title = "Terraria Project Dimension : " + Dimlibs.dimension + " dimension";
+
+			foreach (string launchParametersKey in Program.LaunchParameters.Keys)
+	        {
+		        Logger.Info($"{launchParametersKey} : {Program.LaunchParameters[launchParametersKey]}");
+	        }
+
+	        Instance = this;
+            ReflectionUtilities.Load();
+	        
+			GetDimLibsCommand();
             for (int i = 0; i < ModLoader.Mods.Length; i++)
             {
                 Mod mod = ModLoader.Mods[i];
@@ -50,25 +75,19 @@ namespace Dimlibs
                 }
             }
 
-            if (!Main.dedServ)
-            {
-                Main.OnTick += ClientTickUpdateTransit;
-            }
-            //MassPatcher.StartPatching();
-            //On.Terraria.WorldGen.UpdateWorld += WorldUpdate;
+
+	        if (Main.netMode == 2)
+	        {
+		        On.Terraria.WorldGen.UpdateWorld += WorldUpdate;
+	        }
         }
 
         public override void Unload()
         {
-            ReflectionUtil.Unload();
-            if (!Main.dedServ)
-            {
-                Main.OnTick -= ClientTickUpdateTransit;
-            }
-            //On.Terraria.WorldGen.UpdateWorld -= WorldUpdate;
+            ReflectionUtilities.Unload();
+			ChatServer.instance.Unload();
+            On.Terraria.WorldGen.UpdateWorld -= WorldUpdate;
         }
-
-        private static DefaultAssemblyResolver resolver = new DefaultAssemblyResolver();
 
         public override void PostSetupContent()
         {
@@ -89,19 +108,6 @@ namespace Dimlibs
         }
 
 
-
-        internal static Type[] GetAllTypeInCurrentAssembly(Assembly asm)
-        {
-            return asm.GetTypes();
-        }
-
-        internal static MethodInfo[] GetAllMethodInAType(Type type)
-        {
-            return type.GetMethods();
-        }
-
-        public override void HandlePacket(BinaryReader reader, int whoAmI) => DimensionNetwork.HandlePacket(reader, whoAmI);
-
         internal void Autoload(Mod mod)
         {
             if (mod.Code == null)
@@ -120,7 +126,35 @@ namespace Dimlibs
             }
         }
 
-        private void GetDimLibsCommand()
+	    public override bool HijackGetData(ref byte messageType, ref BinaryReader reader, int playerNumber)
+	    {
+		    if (Main.netMode == 2)
+		    {
+			    if (messageType == 1)
+			    {
+				    if (Main.netMode != 2)
+				    {
+					    return false;
+				    }
+				    if (Netplay.Clients[playerNumber].State != 0)
+				    {
+					    return false;
+				    }
+
+					RemoteAddress address = Netplay.Clients[playerNumber].Socket.GetRemoteAddress();
+
+
+					if (isLan && !address.IsLocalHost())
+				    {
+					    NetMessage.SendData(2, playerNumber, -1, NetworkText.FromLiteral("The server you are trying to join is a LAN world."));
+					    return true;
+				    }
+				} 
+		    }
+		    return base.HijackGetData(ref messageType, ref reader, playerNumber);
+	    }
+
+	    private void GetDimLibsCommand()
         {
             FieldInfo commandListInfo =
                 typeof(CommandManager).GetField("Commands", BindingFlags.Static | BindingFlags.NonPublic);
@@ -138,17 +172,6 @@ namespace Dimlibs
             }
         }
 
-        private bool threadLaunched = false;
-
-        internal void NewServerSocket(int port = 7776)
-        {
-            
-            TcpListener listener = TcpListener.Create(port);
-            listener.Start();
-            ThreadPool.QueueUserWorkItem(ServerLoop, listener);
-            
-        }
-
 
         private void ServerLoop(object context)
         {
@@ -161,10 +184,9 @@ namespace Dimlibs
 
             RemoteServer server = new RemoteServer();
 
-            DimensionNetwork.loading = true;
 
             server.Socket = terrariaSocket;
-            while (DimensionNetwork.loading)
+            while (false)
             {
                 try
                 {
@@ -177,7 +199,6 @@ namespace Dimlibs
                             using (MemoryStream stream = new MemoryStream(data))
                             {
                                 BinaryWriter writer = new BinaryWriter(stream);
-                                writer.Write(DimensionNetwork.loading);
                                 socket.AsyncSend(writer.BaseStream.ReadAllBytes(), 0, 256, new SocketSendCallback(Netplay.Connection.ClientWriteCallBack), null);
                             }
                             
@@ -196,25 +217,6 @@ namespace Dimlibs
 
         #region Client
 
-        private void ClientTickUpdateTransit()
-        {
-            if (Main.LocalPlayer == null || Main.LocalPlayer.name == "")
-            {
-                return;
-            }
-
-            DimPlayer dimPlayer = Main.LocalPlayer.GetModPlayer<DimPlayer>();
-            if (!dimPlayer.inTransit || threadLaunched)
-            {
-                return;
-            }
-
-
-            threadLaunched = true;
-
-            ThreadPool.QueueUserWorkItem(ClientThread, new object[] { dimPlayer });
-
-        }
 
         public void ClientThread(object context)
         {
@@ -245,7 +247,6 @@ namespace Dimlibs
                         using (MemoryStream stream = new MemoryStream(data))
                         {
                             BinaryReader reader = new BinaryReader(new MemoryStream(data));
-                            DimensionNetwork.loading = reader.ReadBoolean();
                         }
                         numberOfAttempt++;
                     }
@@ -259,7 +260,6 @@ namespace Dimlibs
                             secondarySocket.AsyncSend(writer.BaseStream.ReadAllBytes(), 0, ushort.MaxValue, new SocketSendCallback(Netplay.Connection.ClientWriteCallBack), null);
                         }
                     }
-                    exitThread = DimensionNetwork.loading;
                 }
                 catch (Exception e)
                 {
@@ -270,7 +270,6 @@ namespace Dimlibs
             Netplay.Connection.Socket.Close();
             Netplay.StartTcpClient();
             player.inTransit = false;
-            threadLaunched = false;
         }
 
         private static void ClientLoopSetup(RemoteAddress address)
@@ -298,13 +297,21 @@ namespace Dimlibs
         }
         #endregion
 
+	    public override void MidUpdateTimeWorld()
+	    {
+		    if (Main.netMode == 2)
+			    Console.Title = "Terraria Project Dimension : " + Dimlibs.dimension + " dimension";
+	    }
 
-        /*public static void WorldUpdate(On.Terraria.WorldGen.orig_UpdateWorld orig)
+	    public static void WorldUpdate(On.Terraria.WorldGen.orig_UpdateWorld orig)
         {
-            if (!DimensionHandler.FreezeWorldUpdate)
+	        if (Main.netMode == 2)
+		        Console.Title = "Terraria Project Dimension : " + Dimlibs.dimension + " dimension";
+			isActive = Netplay.anyClients;
+            if (isActive)
             {
                 orig.Invoke();
             }
-        }*/
+        }
     }
 }

@@ -18,7 +18,7 @@ namespace Dimlibs.API
 
 		public string URN => mod.Name + ":" + Name;
 
-		internal DimensionHandler handler;
+		internal DimensionHandler.DimensionHandler handler;
 
         public Mod mod
         {
@@ -149,7 +149,7 @@ namespace Dimlibs.API
             g(customProgressObject);
         }
 
-        async Task g(GenerationProgress customProgressObject)
+        public void g(GenerationProgress customProgressObject)
         {
             _generator.GenerateWorld(customProgressObject);
         }
@@ -174,14 +174,14 @@ namespace Dimlibs.API
             dimensionMaxTileY = Main.maxTilesY;
         }
 
-        public DimensionHandler GetHandler()
+        public DimensionHandler.DimensionHandler GetHandler()
         {
             return handler;
         }
 
         public ModDimension()
         {
-            handler = new DimensionHandler(this.GetType().Name);
+            handler = new DimensionHandler.DimensionHandler(this.GetType().Name);
         }
     }
 }

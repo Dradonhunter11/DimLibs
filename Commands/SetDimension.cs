@@ -3,7 +3,7 @@ using Terraria.ModLoader;
 
 namespace Dimlibs.Commands
 {
-    class SetDimension : ModCommand
+    /*class SetDimension : ModCommand
     {
         public override void Action(CommandCaller caller, string input, string[] args)
         {
@@ -60,5 +60,5 @@ namespace Dimlibs.Commands
         public override CommandType Type {
             get { return CommandType.Chat; }
         }
-    }
+    }*/
 }
